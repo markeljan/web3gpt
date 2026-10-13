@@ -4,21 +4,12 @@ import { AGENT_DEPLOY_CHAINS, DEFAULT_AGENT, DEFAULT_COMPILER_VERSION, DEFAULT_T
 import { getAgentById } from "@/lib/data/agents"
 import { getTools } from "@/lib/tools"
 
-type AgentResponseMessage = {
-  role: string
-  content: string | Array<{ type: string; text?: string }>
-}
-
 type AgentChatParams = {
   agentId: string
   messages: UIMessage[]
   userId?: string
   /** `user:<id>` or `ip:<addr>`; meters the server wallet's deployments. */
   callerId?: string
-}
-
-type StreamAgentChatParams = AgentChatParams & {
-  onFinish?: (event: { response: { messages: AgentResponseMessage[] } }) => void | Promise<void>
 }
 
 const providerOptions = {
@@ -72,13 +63,12 @@ export const generateAgentReply = async ({ agentId, messages, userId, callerId }
   return { agent, result }
 }
 
-export const streamAgentReply = async ({ agentId, messages, onFinish, userId, callerId }: StreamAgentChatParams) => {
+export const streamAgentReply = async ({ agentId, messages, userId, callerId }: AgentChatParams) => {
   const { agent, tools, systemPrompt } = await getAgentRuntime({ agentId, callerId, userId })
 
   const result = streamText({
     messages: await convertToModelMessages(toModelWindow(messages)),
     model: openai("gpt-5.4-nano"),
-    onFinish,
     providerOptions,
     stopWhen: stepCountIs(5),
     system: systemPrompt,
