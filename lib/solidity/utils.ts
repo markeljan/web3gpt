@@ -1,9 +1,50 @@
-const IMPORT_REGEX = /import\s+(?:{[^}]+}\s+from\s+)?["']([^"']+)["'];/g
+import { maskComments } from "@/lib/solidity/source-text"
+
 const LOCAL_IMPORT_REGEX = /^\.\//
 const OPENZEPPELIN_IMPORT_FALLBACKS: Record<string, string[]> = {
   "@openzeppelin/contracts/security/Pausable.sol": ["@openzeppelin/contracts/utils/Pausable.sol"],
   "@openzeppelin/contracts/security/PullPayment.sol": ["@openzeppelin/contracts/utils/PullPayment.sol"],
   "@openzeppelin/contracts/security/ReentrancyGuard.sol": ["@openzeppelin/contracts/utils/ReentrancyGuard.sol"],
+}
+
+// ---------------------------------------------------------------------------
+// Import statements. Solidity has four forms, and the symbol list may span
+// several lines:
+//   import "path";
+//   import "path" as Name;
+//   import * as Name from "path";
+//   import {A, B as C} from "path";
+// Imports are found in a copy of the source with comments blanked out, so a
+// commented-out import is not fetched. Rewriting only touches the path
+// literal, so the `as Name` / `* as Name` / `{A, B}` parts are kept.
+// ---------------------------------------------------------------------------
+
+const IMPORT_REGEX =
+  /\bimport\s*(?:(?:\{[^}]*\}|\*\s*as\s+[A-Za-z_$][\w$]*)\s*from\s*)?(["'])([^"'\r\n]+)\1(?:\s*as\s+[A-Za-z_$][\w$]*)?\s*;/dg
+
+export type ImportStatement = {
+  path: string
+  /** Offsets of the path literal, quotes included, in the original source. */
+  literalStart: number
+  literalEnd: number
+}
+
+export const findImports = (source: string): ImportStatement[] =>
+  Array.from(maskComments(source).matchAll(IMPORT_REGEX), (match) => {
+    const [pathStart, pathEnd] = match.indices?.[2] ?? [0, 0]
+    return { literalEnd: pathEnd + 1, literalStart: pathStart - 1, path: match[2] }
+  })
+
+/** Replaces the path of every import for which `rename` returns a new path. */
+export const rewriteImports = (source: string, rename: (importPath: string) => string | undefined): string => {
+  let result = source
+  for (const { path, literalStart, literalEnd } of findImports(source).reverse()) {
+    const renamed = rename(path)
+    if (renamed !== undefined && renamed !== path) {
+      result = `${result.slice(0, literalStart)}"${renamed}"${result.slice(literalEnd)}`
+    }
+  }
+  return result
 }
 
 // ---------------------------------------------------------------------------
@@ -76,10 +117,9 @@ export async function resolveImports(
   budget: ImportBudget = { remaining: MAX_REMOTE_IMPORTS }
 ) {
   const sources: { [fileName: string]: { content: string } } = {}
-  const matches = Array.from(sourceCode.matchAll(IMPORT_REGEX))
-  let sourceCodeWithImports = sourceCode
-  for (const match of matches) {
-    const importPath = match[1]
+  const importPaths = new Set(findImports(sourceCode).map(({ path }) => path))
+  const renamed = new Map<string, string>()
+  for (const importPath of importPaths) {
     const { sources: importedSources, sourceCode: mainSourceCode } = await fetchImport(
       importPath,
       sourcePath,
@@ -100,9 +140,9 @@ export async function resolveImports(
     sources[sourceFileName] = {
       content: mainSourceCode,
     }
-    sourceCodeWithImports = sourceCodeWithImports.replace(match[0], `import "${sourceFileName}";`)
+    renamed.set(importPath, sourceFileName)
   }
-  return { sourceCode: sourceCodeWithImports, sources }
+  return { sourceCode: rewriteImports(sourceCode, (importPath) => renamed.get(importPath)), sources }
 }
 
 async function fetchImport(
@@ -177,6 +217,11 @@ function resolveImportPath(importPath: string, sourcePath: string) {
   return sourceSegments.concat(importSegments).join("/")
 }
 
+// First segment of an npm package path such as "solmate/src/tokens/ERC20.sol"
+// or "forge-std/Test.sol": a lowercase package name with no dots (so it can't
+// be a host name), followed by a path inside the package.
+const BARE_PACKAGE_IMPORT = /^[a-z0-9][a-z0-9_-]{0,213}\/[^/]/
+
 const GITHUB_BLOB_URL = /^(?:https:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/
 const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i
 
@@ -185,7 +230,7 @@ export function getImportUrl(importPath: string, sourcePath?: string) {
 
   if (importPath[0] === "." && sourcePath) {
     urlToFetch = resolveImportPath(importPath, sourcePath)
-  } else if (importPath[0] === "@") {
+  } else if (importPath[0] === "@" || BARE_PACKAGE_IMPORT.test(importPath)) {
     urlToFetch = `https://unpkg.com/${importPath}`
   } else {
     urlToFetch = importPath
@@ -219,8 +264,6 @@ function getImportFallbacks(importPath: string) {
 }
 
 const CONTRACT_NAME_REGEX = /[/\\:*?"<>|.\s]+$/g
-const IMPORT_STATEMENT_REGEX = /import\s+["'][^"']+["'];/g
-const IMPORT_PATH_REGEX = /["']([^"']+)["']/
 
 export const getContractFileName = (contractName: string): string =>
   `${contractName.replace(CONTRACT_NAME_REGEX, "_")}.sol`
@@ -241,24 +284,12 @@ export async function prepareContractSources(
     ...handleImportsResult?.sources,
   }
 
-  const sourcesKeys = Object.keys(sources)
-
-  for (const sourceKey of sourcesKeys) {
-    let itemSourceCode = sources[sourceKey].content
-    const importStatements = itemSourceCode.match(IMPORT_STATEMENT_REGEX) || []
-
-    for (const importStatement of importStatements) {
-      const importPathMatch = importStatement.match(IMPORT_PATH_REGEX)
-      if (!importPathMatch) {
-        continue
-      }
-
-      const importPath = importPathMatch[1]
-      const itemFileName = importPath.split("/").pop() || importPath
-      itemSourceCode = itemSourceCode.replace(importStatement, `import "${itemFileName}";`)
-    }
-
-    sources[sourceKey].content = itemSourceCode
+  // Every file is now stored under a flat name. Point any import that doesn't
+  // already name one of those files at its bare file name.
+  for (const source of Object.values(sources)) {
+    source.content = rewriteImports(source.content, (importPath) =>
+      sources[importPath] ? undefined : importPath.split("/").pop() || importPath
+    )
   }
 
   return sources
