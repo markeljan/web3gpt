@@ -156,6 +156,7 @@ export const getVerifications = async (): Promise<VerificationScanResult> => {
 
   do {
     // Use SCAN instead of KEYS to avoid blocking
+    // biome-ignore lint/performance/noAwaitInLoops: each SCAN call needs the previous cursor
     const [nextCursor, keys] = await kv.scan(cursor, {
       count: BATCH_SIZE,
       match: `${VERIFICATION_KEY_PREFIX}*`,
@@ -332,6 +333,7 @@ export const getAllDeployments = async () => {
 
   // Use SCAN instead of KEYS to avoid blocking
   do {
+    // biome-ignore lint/performance/noAwaitInLoops: each SCAN call needs the previous cursor
     const [nextCursor, keys] = await kv.scan(cursor, {
       count: BATCH_SIZE,
       match: "deployment:*",

@@ -39,6 +39,8 @@ Current Settings:
 
 const getAgentRuntime = async ({ agentId, userId, callerId }: Omit<AgentChatParams, "messages">) => {
   const agent = await getAgentById(agentId)
+  // KV-stored agents are untyped at runtime and older records lack toolNames.
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: runtime data can be missing the field
   const tools = getTools(agent.toolNames ?? DEFAULT_TOOL_NAMES, { callerId, userId })
 
   return {

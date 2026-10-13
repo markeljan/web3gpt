@@ -150,7 +150,8 @@ export async function processVerifications() {
   for (const verificationData of selection.selected) {
     try {
       const status = verificationData.verificationGuid
-        ? await checkSubmittedVerification(verificationData)
+        ? // biome-ignore lint/performance/noAwaitInLoops: explorers rate-limit per API key
+          await checkSubmittedVerification(verificationData)
         : await submitVerification(verificationData)
 
       if (status === "verified") {
