@@ -94,7 +94,12 @@ const downloadSoljson = async (release: SolcRelease): Promise<string> => {
   if (bytes.byteLength > MAX_COMPILER_BYTES) {
     throw new Error("compiler download is too large")
   }
-  if (release.sha256 && createHash("sha256").update(bytes).digest("hex") !== release.sha256) {
+  // This file is executed in-process, so an unverifiable download is refused
+  // rather than trusted.
+  if (!release.sha256) {
+    throw new Error(`No published checksum for solc ${release.longVersion}`)
+  }
+  if (createHash("sha256").update(bytes).digest("hex") !== release.sha256) {
     throw new Error("compiler download does not match the published checksum")
   }
   return new TextDecoder().decode(bytes)
