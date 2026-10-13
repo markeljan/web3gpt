@@ -6,7 +6,75 @@ const OPENZEPPELIN_IMPORT_FALLBACKS: Record<string, string[]> = {
   "@openzeppelin/contracts/security/ReentrancyGuard.sol": ["@openzeppelin/contracts/utils/ReentrancyGuard.sol"],
 }
 
-export async function resolveImports(sourceCode: string, sourcePath?: string, localSources?: Record<string, string>) {
+// ---------------------------------------------------------------------------
+// Remote imports. Contract source comes from users and from the model, and the
+// resolver used to fetch whatever an `import` named, so the server could be
+// made to request arbitrary URLs. Remote fetches are now restricted to public
+// package CDNs and GitHub raw content, over https, with a timeout and caps on
+// size and count.
+// ---------------------------------------------------------------------------
+
+export const ALLOWED_IMPORT_HOSTS = new Set(["unpkg.com", "cdn.jsdelivr.net", "raw.githubusercontent.com"])
+const IMPORT_FETCH_TIMEOUT_MS = 10_000
+const MAX_IMPORT_BYTES = 1_000_000
+export const MAX_REMOTE_IMPORTS = 200
+
+export class ImportNotAllowedError extends Error {}
+
+/** Throws unless `url` is an https URL on an allowed host. Returns the parsed URL. */
+export const assertAllowedImportUrl = (url: string): URL => {
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch (error) {
+    throw new ImportNotAllowedError(
+      `Unsupported import "${url}". Use an npm package path (e.g. @openzeppelin/...) or a GitHub URL.`,
+      { cause: error }
+    )
+  }
+  if (parsed.protocol !== "https:" || !ALLOWED_IMPORT_HOSTS.has(parsed.hostname) || parsed.port || parsed.username) {
+    throw new ImportNotAllowedError(
+      `Imports may only be fetched from ${[...ALLOWED_IMPORT_HOSTS].join(", ")} or github.com over https (got "${url}")`
+    )
+  }
+  return parsed
+}
+
+type ImportBudget = { remaining: number }
+
+const fetchRemoteSource = async (url: string, budget: ImportBudget): Promise<Response> => {
+  assertAllowedImportUrl(url)
+  budget.remaining -= 1
+  if (budget.remaining < 0) {
+    throw new ImportNotAllowedError(`Too many remote imports (limit ${MAX_REMOTE_IMPORTS})`)
+  }
+
+  const response = await fetch(url, { redirect: "follow", signal: AbortSignal.timeout(IMPORT_FETCH_TIMEOUT_MS) })
+  // unpkg redirects to versioned paths; make sure a redirect didn't leave the allowlist.
+  if (response.url) {
+    assertAllowedImportUrl(response.url)
+  }
+  const declaredLength = Number(response.headers.get("content-length") ?? 0)
+  if (declaredLength > MAX_IMPORT_BYTES) {
+    throw new ImportNotAllowedError(`Import ${url} is too large`)
+  }
+  return response
+}
+
+const readLimitedText = async (response: Response, url: string): Promise<string> => {
+  const text = await response.text()
+  if (text.length > MAX_IMPORT_BYTES) {
+    throw new ImportNotAllowedError(`Import ${url} is too large`)
+  }
+  return text
+}
+
+export async function resolveImports(
+  sourceCode: string,
+  sourcePath?: string,
+  localSources?: Record<string, string>,
+  budget: ImportBudget = { remaining: MAX_REMOTE_IMPORTS }
+) {
   const sources: { [fileName: string]: { content: string } } = {}
   const matches = Array.from(sourceCode.matchAll(IMPORT_REGEX))
   let sourceCodeWithImports = sourceCode
@@ -15,7 +83,8 @@ export async function resolveImports(sourceCode: string, sourcePath?: string, lo
     const { sources: importedSources, sourceCode: mainSourceCode } = await fetchImport(
       importPath,
       sourcePath,
-      localSources
+      localSources,
+      budget
     )
 
     // Merge the imported sources into the main sources object
@@ -36,7 +105,12 @@ export async function resolveImports(sourceCode: string, sourcePath?: string, lo
   return { sourceCode: sourceCodeWithImports, sources }
 }
 
-async function fetchImport(importPath: string, sourcePath?: string, localSources?: Record<string, string>) {
+async function fetchImport(
+  importPath: string,
+  sourcePath: string | undefined,
+  localSources: Record<string, string> | undefined,
+  budget: ImportBudget
+) {
   // Check if the import exists in provided local sources
   if (localSources) {
     let localPath = importPath
@@ -49,7 +123,8 @@ async function fetchImport(importPath: string, sourcePath?: string, localSources
       const { sources: importedSources, sourceCode: importedSourceCode } = await resolveImports(
         importedSource,
         localPath,
-        localSources
+        localSources,
+        budget
       )
       return { sourceCode: importedSourceCode, sources: importedSources }
     }
@@ -60,17 +135,17 @@ async function fetchImport(importPath: string, sourcePath?: string, localSources
 
   for (const importCandidate of importCandidates) {
     const urlToFetch = getImportUrl(importCandidate, sourcePath)
-    const response = await fetch(urlToFetch)
+    const response = await fetchRemoteSource(urlToFetch, budget)
 
     if (!response.ok) {
       lastError = new Error(`HTTP error! status: ${response.status} while fetching ${importCandidate}`)
       continue
     }
 
-    const importedSource = await response.text()
+    const importedSource = await readLimitedText(response, urlToFetch)
 
     // Handle any imports within the fetched source code
-    const { sources, sourceCode } = await resolveImports(importedSource, urlToFetch, localSources)
+    const { sources, sourceCode } = await resolveImports(importedSource, urlToFetch, localSources, budget)
 
     return { sourceCode, sources }
   }
@@ -102,7 +177,10 @@ function resolveImportPath(importPath: string, sourcePath: string) {
   return sourceSegments.concat(importSegments).join("/")
 }
 
-function getImportUrl(importPath: string, sourcePath?: string) {
+const GITHUB_BLOB_URL = /^(?:https:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/
+const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i
+
+export function getImportUrl(importPath: string, sourcePath?: string) {
   let urlToFetch: string
 
   if (importPath[0] === "." && sourcePath) {
@@ -113,8 +191,15 @@ function getImportUrl(importPath: string, sourcePath?: string) {
     urlToFetch = importPath
   }
 
-  if (urlToFetch.includes("github.com")) {
-    return urlToFetch.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
+  // github.com/<owner>/<repo>/blob/<ref>/<path>  ->  raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>
+  const blob = urlToFetch.match(GITHUB_BLOB_URL)
+  if (blob) {
+    return `https://raw.githubusercontent.com/${blob[1]}/${blob[2]}/${blob[3]}`
+  }
+
+  // Allow scheme-less "raw.githubusercontent.com/..." style imports.
+  if (!SCHEME.test(urlToFetch)) {
+    return `https://${urlToFetch}`
   }
 
   return urlToFetch

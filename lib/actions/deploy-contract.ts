@@ -1,9 +1,9 @@
-"use server"
-import type { SolcOutput } from "solc"
-import type { Abi } from "viem"
-import { ipfsUploadDir, ipfsUploadFile } from "@/lib/data/ipfs"
+import "server-only"
 import { compileContractSource } from "@/lib/solidity/compile"
 
+// Plain server-only module. It used to be marked "use server", which can expose
+// every export as a public, unauthenticated server action endpoint, including
+// two unused helpers that pinned arbitrary files to the project's Pinata account.
 export async function compileContract({
   contractName,
   sourceCode,
@@ -18,17 +18,4 @@ export async function compileContract({
     sourceCode,
     sources: additionalSources,
   })
-}
-
-export async function ipfsUploadFileAction(fileName: string, fileContent: string): Promise<string | null> {
-  return await ipfsUploadFile(fileName, fileContent)
-}
-
-export async function ipfsUploadDirAction(
-  sources: SolcOutput["sources"],
-  abi: Abi,
-  bytecode: string,
-  standardJsonInput: string
-) {
-  return await ipfsUploadDir(sources, abi, bytecode, standardJsonInput)
 }

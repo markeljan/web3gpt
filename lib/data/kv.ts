@@ -238,6 +238,20 @@ export const deleteWalletDeployArtifact = async (artifactId: string) => {
   await kv.del(`wallet-deploy:${artifactId}`)
 }
 
+const WALLET_DEPLOY_CLAIM_TTL_SECONDS = 120
+
+/**
+ * Takes a short exclusive lock on an artifact while a finalize request records
+ * it, so concurrent or replayed requests can't record the same deployment twice.
+ * Returns false if another request holds the lock.
+ */
+export const claimWalletDeployArtifact = async (artifactId: string): Promise<boolean> =>
+  (await kv.set(`wallet-deploy-claim:${artifactId}`, 1, { ex: WALLET_DEPLOY_CLAIM_TTL_SECONDS, nx: true })) === "OK"
+
+export const releaseWalletDeployArtifactClaim = async (artifactId: string) => {
+  await kv.del(`wallet-deploy-claim:${artifactId}`)
+}
+
 export const storeAgent = withUser<Agent, void>(async (agent, userId) => {
   if (userId !== agent.userId) {
     return
