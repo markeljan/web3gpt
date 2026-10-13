@@ -2,6 +2,7 @@ import { generateId, tool } from "ai"
 import { z } from "zod"
 import { resolveAddress, resolveDomain } from "@/lib/actions/unstoppable-domains"
 import { PRODUCTION_URL } from "@/lib/config"
+import { checkDeployAllowance } from "@/lib/deploy-limits"
 import { deployContract } from "@/lib/solidity/deploy"
 import { formatDeploymentToolResult } from "@/lib/solidity/deployment-tool-result"
 import type { ToolName } from "@/lib/types"
@@ -72,6 +73,8 @@ export const schemas = {
 // Context required for tools that need runtime data
 export type ToolContext = {
   userId?: string
+  /** Who is driving the conversation, for deployment limits: `user:<id>` or `ip:<addr>`. */
+  callerId?: string
 }
 
 // Tool definitions factory - creates tool with execute function
@@ -111,6 +114,12 @@ const createToolDefinitions = (context: ToolContext = {}) => ({
     description:
       "Deploy a smart contract to an EVM compatible chain. Returns the tx hash of the deployment and an IPFS url to a directory with the files used for the contract deployment.",
     execute: async ({ chainId, contractName, sourceCode, constructorArgs = [] }) => {
+      // The server wallet pays for these deployments, so every call is metered.
+      const allowance = await checkDeployAllowance({ callerId: context.callerId ?? "ip:unknown", chainId })
+      if (!allowance.ok) {
+        return JSON.stringify({ error: allowance.reason })
+      }
+
       const deployResult = await deployContract({
         chainId,
         constructorArgs,

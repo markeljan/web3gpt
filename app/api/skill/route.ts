@@ -10,6 +10,8 @@ import {
 } from "@/lib/chat-utils"
 import { DEFAULT_AGENT_ID } from "@/lib/constants"
 import { getSkillChat, storeSkillChat } from "@/lib/data/kv"
+import { getCallerId } from "@/lib/deploy-limits"
+import { getClientIp, hitRateLimits, LIMITS, rateLimitHeaders } from "@/lib/rate-limit"
 import type { SkillChat } from "@/lib/types"
 
 export const maxDuration = 60
@@ -18,7 +20,12 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Expose-Headers": "Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining",
 }
+
+/** Roughly a large contract plus instructions; longer prompts are refused. */
+const MAX_MESSAGE_CHARS = 50_000
+const CHAT_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
 
 type SkillRequest = {
   agentId?: string
@@ -78,9 +85,33 @@ const json = (body: unknown, init?: ResponseInit) => {
 async function handleSkillRequest(request: NextRequest) {
   const payload = await getRequestPayload(request)
   const includeHistory = payload.full || payload.history
-  const chatId = payload.chatId || generateId()
   const requestedAgentId = payload.agentId || DEFAULT_AGENT_ID
   const message = payload.message?.trim()
+  const ip = getClientIp(request.headers)
+
+  if (payload.chatId && !CHAT_ID_PATTERN.test(payload.chatId)) {
+    return json({ error: "chatId must be 1-64 characters of A-Z, a-z, 0-9, _ or -" }, { status: 400 })
+  }
+  const chatId = payload.chatId || generateId()
+
+  if (message && message.length > MAX_MESSAGE_CHARS) {
+    return json({ chatId, error: `message must be at most ${MAX_MESSAGE_CHARS} characters` }, { status: 413 })
+  }
+
+  // This endpoint is public and unauthenticated. Turns that call the model are
+  // limited per IP and per chat; plain reads get a looser per-IP limit.
+  const limit = message
+    ? await hitRateLimits([
+        { id: ip, rule: LIMITS.skillMessage },
+        { id: chatId, rule: LIMITS.skillMessagePerChat },
+      ])
+    : await hitRateLimits([{ id: ip, rule: LIMITS.skillRead }])
+  if (!limit.ok) {
+    return json(
+      { chatId, error: "Too many requests. Please slow down.", retryAfterSeconds: limit.resetSeconds },
+      { headers: rateLimitHeaders(limit), status: 429 }
+    )
+  }
 
   const existingChat = await getSkillChat(chatId)
   const activeAgentId = existingChat?.agentId || requestedAgentId
@@ -110,6 +141,7 @@ async function handleSkillRequest(request: NextRequest) {
     const messages = [...session.messages, userMessage]
     const { result } = await generateAgentReply({
       agentId: activeAgentId,
+      callerId: getCallerId({ ip }),
       messages,
     })
 
@@ -134,11 +166,13 @@ async function handleSkillRequest(request: NextRequest) {
       response: assistantText || null,
     })
   } catch (error) {
+    // Log the detail server-side; provider and RPC errors can carry internals.
+    console.error("skill request failed", { chatId, error })
     return json(
       {
         agentId: activeAgentId,
         chatId,
-        error: error instanceof Error ? error.message : "Failed to complete skill request",
+        error: "Failed to complete skill request",
       },
       { status: 500 }
     )
