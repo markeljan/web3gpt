@@ -111,6 +111,7 @@ export const Chat = ({ initialChatId, initialMessages = [], agent, className, us
       return
     }
 
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types useRef(false).current as always false, but it is set to true below and persists across renders
     if (!hasSyncedNewChat.current) {
       hasSyncedNewChat.current = true
       router.refresh()

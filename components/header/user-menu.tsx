@@ -70,7 +70,7 @@ export const UserMenu = ({ user, variant = "header", showClearHistory = false }:
           <AlertDialog onOpenChange={setClearHistoryOpen} open={clearHistoryOpen}>
             <AlertDialogTrigger asChild>
               <Button className="h-auto w-full justify-start p-0 font-normal" disabled={isClearPending} variant="ghost">
-                {isClearPending && <IconSpinner className="mr-2" />}
+                {isClearPending ? <IconSpinner className="mr-2" /> : null}
                 <IconClear className="mr-2 h-4 w-4" />
                 Clear History
               </Button>
@@ -306,7 +306,7 @@ export const UserMenu = ({ user, variant = "header", showClearHistory = false }:
                 {user?.name ? getUserInitials(user?.name) : null}
               </div>
             )}
-            <span className="ml-2 hidden lg:flex">{user?.name && user?.name}</span>
+            <span className="ml-2 hidden lg:flex">{user?.name}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[220px]" sideOffset={8}>

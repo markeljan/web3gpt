@@ -11,7 +11,7 @@ export type SidebarListProps = {
 
 export function SidebarList({ chatList }: SidebarListProps) {
   const pathname = usePathname()
-  const activeChatId = pathname.split("/chat/")[1]
+  const [, activeChatId] = pathname.split("/chat/")
 
   return (
     <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto">

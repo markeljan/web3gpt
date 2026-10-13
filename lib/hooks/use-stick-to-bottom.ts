@@ -39,6 +39,7 @@ export function useStickToBottom(): StickToBottom {
 
   const measure = useCallback(() => {
     const element = scrollRef.current
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types useRef(null).current as always null, but React attaches the element
     if (!element) {
       return
     }
@@ -52,6 +53,7 @@ export function useStickToBottom(): StickToBottom {
   // Jump, never animate: smooth scrolling cannot keep up with token streaming.
   const follow = useCallback(() => {
     const element = scrollRef.current
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types useRef(null).current as always null, but React attaches the element and isPinned is reassigned
     if (!(element && isPinned.current)) {
       return
     }
@@ -61,6 +63,7 @@ export function useStickToBottom(): StickToBottom {
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     const element = scrollRef.current
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types useRef(null).current as always null, but React attaches the element
     if (!element) {
       return
     }
@@ -73,6 +76,7 @@ export function useStickToBottom(): StickToBottom {
   useEffect(() => {
     const element = scrollRef.current
     const content = contentRef.current
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types useRef(null).current as always null, but React attaches the elements
     if (!(element && content)) {
       return
     }

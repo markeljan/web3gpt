@@ -38,12 +38,12 @@ export function Navigation({ className, variant = "desktop" }: NavigationProps) 
             >
               <Icon className="h-4 w-4" />
               <span>{item.name}</span>
-              {item.badge && (
+              {item.badge ? (
                 <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 font-semibold text-primary text-xs">
                   {item.badge}
                 </span>
-              )}
-              {isExternal && <ExternalLink className="ml-auto h-3 w-3" />}
+              ) : null}
+              {isExternal ? <ExternalLink className="ml-auto h-3 w-3" /> : null}
             </Link>
           )
         })}
@@ -74,11 +74,11 @@ export function Navigation({ className, variant = "desktop" }: NavigationProps) 
             >
               <Icon className="h-4 w-4" />
               <span>{item.name}</span>
-              {item.badge && (
+              {item.badge ? (
                 <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1.5 py-0.5 font-semibold text-primary-foreground text-xs">
                   {item.badge}
                 </span>
-              )}
+              ) : null}
             </Link>
           </Button>
         )

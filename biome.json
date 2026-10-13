@@ -63,13 +63,13 @@
             "maxAllowedComplexity": 30
           }
         },
-        "noUselessCatchBinding": "warn"
+        "noUselessCatchBinding": "error"
       },
       "suspicious": {
         "noConsole": "off",
-        "noLeakedRender": "warn",
+        "noLeakedRender": "error",
         "noUnnecessaryConditions": "warn",
-        "noShadow": "warn"
+        "noShadow": "error"
       },
       "style": {
         "useConsistentTypeDefinitions": {
@@ -79,10 +79,10 @@
           }
         },
         "useDestructuring": "warn",
-        "noIncrementDecrement": "warn"
+        "noIncrementDecrement": "error"
       },
       "performance": {
-        "noJsxPropsBind": "warn",
+        "noJsxPropsBind": "off",
         "noAwaitInLoops": "warn",
         "noImgElement": "warn"
       }

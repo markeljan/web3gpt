@@ -14,6 +14,7 @@ type SidebarItemProps = {
 }
 
 export function SidebarItem({ chat, isActive, children }: SidebarItemProps) {
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: chat list entries come from KV, which is untyped at runtime
   if (!chat?.id) {
     return null
   }

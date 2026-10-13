@@ -41,6 +41,7 @@ export function PermanentSidebar({ children, className, user }: PermanentSidebar
 
       {/* Sidebar Content */}
       <div className={cn("flex h-full flex-col overflow-hidden")}>
+        {/* biome-ignore lint/suspicious/noLeakedRender: `children` is the expanded sidebar content and is meant to render */}
         {isCollapsed ? <SidebarCollapsed user={user} /> : children}
       </div>
     </div>

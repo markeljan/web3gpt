@@ -27,7 +27,7 @@ function getMessageText(message: UIMessage | LegacyMessage): string {
 
   // Handle v4 format (content property) for backward compatibility
   if ("content" in message && message.content) {
-    const content = message.content
+    const { content } = message
     if (typeof content === "string") {
       return content
     }
