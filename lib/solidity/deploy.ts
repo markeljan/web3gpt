@@ -28,7 +28,7 @@ export const deployContract = async ({
     throw new Error(`Chain ${chainId} not found`)
   }
 
-  const { abi, bytecode, standardJsonInput, sources } = await compileContract({
+  const { abi, bytecode, compilerVersion, standardJsonInput, sources } = await compileContract({
     contractName,
     sourceCode,
     sources: imports,
@@ -90,6 +90,7 @@ export const deployContract = async ({
   const fileName = getContractFileName(contractName)
 
   const verifyContractConfig: VerifyContractParams = {
+    compilerVersion,
     contractAddress,
     contractName,
     deployHash,

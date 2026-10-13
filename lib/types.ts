@@ -95,6 +95,12 @@ export type VerifyContractParams = {
   encodedConstructorArgs: string
   fileName: string
   contractName: string
+  /**
+   * Full solc version the contract was compiled with, e.g. "v0.8.24+commit.e11b9ed9".
+   * Records queued before compiler selection existed don't have it; they were
+   * all compiled with DEFAULT_COMPILER_VERSION.
+   */
+  compilerVersion?: string
   viemChain: Omit<Chain, "contracts" | "ensRegistry" | "ensUniversalResolver" | "multicall3" | "formatters">
   verificationAttempts?: number
   verificationGuid?: string
@@ -110,6 +116,8 @@ export type VerifyContractParams = {
 export type WalletDeployArtifact = {
   abi: Abi
   bytecode: Hash
+  /** Missing on artifacts prepared before compiler selection existed. */
+  compilerVersion?: string
   contractName: string
   sources: SolcInputSources
   standardJsonInput: string
