@@ -1,5 +1,6 @@
 import { type OpenAIResponsesProviderOptions, openai } from "@ai-sdk/openai"
 import { convertToModelMessages, generateText, isStepCount, streamText, type UIMessage } from "ai"
+import { getAiModel } from "@/lib/ai-model"
 import { AGENT_DEPLOY_CHAINS, DEFAULT_AGENT, DEFAULT_COMPILER_VERSION, DEFAULT_TOOL_NAMES } from "@/lib/constants"
 import { getAgentById } from "@/lib/data/agents"
 import { getTools } from "@/lib/tools"
@@ -66,7 +67,7 @@ export const generateAgentReply = async ({ agentId, messages, userId, callerId }
   const result = await generateText({
     instructions: systemPrompt,
     messages: await convertToModelMessages(toModelWindow(messages)),
-    model: openai("gpt-5.4-nano"),
+    model: openai(getAiModel()),
     providerOptions,
     stopWhen: isStepCount(5),
     tools,
@@ -81,7 +82,7 @@ export const streamAgentReply = async ({ agentId, messages, userId, callerId }: 
   const result = streamText({
     instructions: systemPrompt,
     messages: await convertToModelMessages(toModelWindow(messages)),
-    model: openai("gpt-5.4-nano"),
+    model: openai(getAiModel()),
     providerOptions,
     stopWhen: isStepCount(5),
     tools,
