@@ -1,4 +1,5 @@
 import "server-only"
+import { errors } from "@upstash/redis"
 import { getSession } from "@/lib/auth"
 import { isChatOwner } from "@/lib/chat-ownership"
 import { redis } from "@/lib/redis"
@@ -142,6 +143,53 @@ export type VerificationScanResult = {
   unreadable: number
 }
 
+type HashRead<T> = { ok: true; value: T | null } | { ok: false }
+
+const readHashOrUnreadable = async <T extends Record<string, unknown>>(key: string): Promise<HashRead<T>> => {
+  try {
+    return { ok: true, value: await redis.hgetall<T>(key) }
+  } catch (error) {
+    // A command error (e.g. WRONGTYPE for a key that is not a hash) makes this one key
+    // unreadable; anything else, such as a network failure, is a real outage and propagates.
+    if (error instanceof errors.UpstashError) {
+      return { ok: false }
+    }
+    throw error
+  }
+}
+
+const KEY_BY_KEY_CONCURRENCY = 20
+
+/**
+ * HGETALLs `keys` in one pipeline, reporting per key whether it could be read.
+ *
+ * `exec({ keepErrors: true })` is meant to return failed commands individually, but
+ * @upstash/redis (1.37 to at least 1.39) throws a TypeError from HGETALL's result parser
+ * when one of them fails, because the failed reply carries no result. So one key that
+ * is not a hash would fail the whole batch. When the pipeline throws, the batch is read
+ * again key by key, which isolates the bad keys.
+ */
+const readHashes = async <T extends Record<string, unknown>>(keys: string[]): Promise<HashRead<T>[]> => {
+  const pipeline = redis.pipeline()
+  for (const key of keys) {
+    pipeline.hgetall<T>(key)
+  }
+  try {
+    const results = await pipeline.exec<(T | null)[]>({ keepErrors: true })
+    return results.map(
+      ({ error, result }): HashRead<T> => (error ? { ok: false } : { ok: true, value: result ?? null })
+    )
+  } catch {
+    const reads: HashRead<T>[] = []
+    for (let start = 0; start < keys.length; start += KEY_BY_KEY_CONCURRENCY) {
+      const chunk = keys.slice(start, start + KEY_BY_KEY_CONCURRENCY)
+      // biome-ignore lint/performance/noAwaitInLoops: bounds the number of concurrent requests
+      reads.push(...(await Promise.all(chunk.map((key) => readHashOrUnreadable<T>(key)))))
+    }
+    return reads
+  }
+}
+
 /**
  * Returns every live `verification:*` hash together with its key. Values are
  * returned untyped because anything can end up in KV; the cron validates them.
@@ -165,17 +213,12 @@ export const getVerifications = async (): Promise<VerificationScanResult> => {
     cursor = Number.parseInt(nextCursor, 10)
 
     if (keys && keys.length > 0) {
-      // Process in batches to avoid "too many keys" error
-      const pipeline = redis.pipeline()
-      for (const key of keys) {
-        pipeline.hgetall(key)
-      }
-      const batchResults = await pipeline.exec({ keepErrors: true })
-      batchResults.forEach(({ error, result }, index) => {
-        if (error) {
+      const batchResults = await readHashes<Record<string, unknown>>(keys)
+      batchResults.forEach((read, index) => {
+        if (!read.ok) {
           unreadable += 1
-        } else if (result) {
-          entries.push({ data: result, key: keys[index] })
+        } else if (read.value) {
+          entries.push({ data: read.value, key: keys[index] })
         }
       })
     }
@@ -326,8 +369,10 @@ export const getUserDeployments = withUser<void, DeploymentRecord[]>(async (_, u
   return results.filter(Boolean)
 })
 
+/** Every deployment record. Keys that cannot be read as a hash are skipped (and logged), not thrown. */
 export const getAllDeployments = async () => {
   const deployments: DeploymentRecord[] = []
+  let unreadable = 0
   const BATCH_SIZE = 10_000 // Process up to 10000 keys at a time
   let cursor = 0
 
@@ -342,14 +387,19 @@ export const getAllDeployments = async () => {
     cursor = Number.parseInt(nextCursor, 10)
 
     if (keys && keys.length > 0) {
-      const pipeline = redis.pipeline()
-      for (const key of keys) {
-        pipeline.hgetall<DeploymentRecord>(key)
+      const batchResults = await readHashes<DeploymentRecord>(keys)
+      for (const read of batchResults) {
+        if (!read.ok) {
+          unreadable += 1
+        } else if (read.value) {
+          deployments.push(read.value)
+        }
       }
-      const batchResults = await pipeline.exec<DeploymentRecord[]>()
-      deployments.push(...batchResults.filter(Boolean))
     }
   } while (cursor !== 0)
 
+  if (unreadable > 0) {
+    console.warn(`getAllDeployments: skipped ${unreadable} deployment:* key(s) that could not be read as a hash`)
+  }
   return deployments
 }
