@@ -11,6 +11,7 @@ declare module "solc" {
     language: "Solidity"
     sources: SolcInputSources
     settings: {
+      evmVersion?: string
       optimizer: {
         enabled: boolean
         runs: number
@@ -124,9 +125,17 @@ declare module "solc" {
 
   function compile(input: string, readCallback?: (path: string) => { contents: string } | { error: string }): string
 
-  const solc: {
+  export type Solc = {
     compile: typeof compile
+    /** e.g. "0.8.29+commit.ab55807c.Emscripten.clang" */
+    version: () => string
+    /** Downloads soljson-<version>.js from binaries.soliditylang.org, e.g. "v0.8.24+commit.e11b9ed9". */
+    loadRemoteVersion: (version: string, callback: (error: Error | null, solc?: Solc) => void) => void
+    /** Wraps an already-loaded soljson Emscripten module. */
+    setupMethods: (soljson: unknown) => Solc
   }
+
+  const solc: Solc
 
   export default solc
 }
