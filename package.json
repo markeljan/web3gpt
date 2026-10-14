@@ -8,7 +8,7 @@
     "format": "ultracite fix",
     "lint": "ultracite check",
     "start": "next start",
-    "test": "bun test",
+    "test": "bun test --isolate",
     "typecheck": "tsc --incremental false"
   },
   "overrides": {
