@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test"
 
 mock.module("server-only", () => ({}))
-mock.module("@vercel/kv", () => ({ kv: {} }))
+mock.module("@/lib/redis", () => ({ redis: {} }))
 
 const { getClientIp, getWindow, hitRateLimit, hitRateLimits, rateLimitKey } = await import("@/lib/rate-limit")
 const { checkDeployAllowance, getCallerId, isMainnetChain } = await import("@/lib/deploy-limits")

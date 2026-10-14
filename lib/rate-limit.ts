@@ -1,8 +1,8 @@
 import "server-only"
-import { kv } from "@vercel/kv"
+import { redis } from "@/lib/redis"
 
 /**
- * Fixed-window rate limiting on the existing Vercel KV (Upstash Redis) store.
+ * Fixed-window rate limiting on the existing Upstash Redis store (formerly Vercel KV).
  *
  * Each window is one counter key, `ratelimit:<bucket>:<id>:<window index>`, which
  * expires with the window. That costs one INCR per check (plus one EXPIRE when a
@@ -52,7 +52,7 @@ export async function hitRateLimit(
   {
     failOpen = true,
     now = Date.now(),
-    store = kv as CounterStore,
+    store = redis as CounterStore,
   }: { failOpen?: boolean; now?: number; store?: CounterStore } = {}
 ): Promise<RateLimitResult> {
   const { index, resetSeconds } = getWindow(now, rule.windowSeconds)

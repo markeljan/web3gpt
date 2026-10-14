@@ -1,7 +1,7 @@
 import "server-only"
-import { kv } from "@vercel/kv"
 import { AGENTS_ARRAY, DEFAULT_AGENT } from "@/lib/constants"
 import { getAgent } from "@/lib/data/kv"
+import { redis } from "@/lib/redis"
 import type { Agent } from "@/lib/types"
 
 const AGENT_CACHE_TTL = 3600 // 1 hour
@@ -18,7 +18,7 @@ export const getAgentById = async (agentId: string): Promise<Agent> => {
 
   // Check cache for user-created agents
   const cacheKey = `agent:cache:${agentId}`
-  const cached = await kv.get<Agent>(cacheKey)
+  const cached = await redis.get<Agent>(cacheKey)
   if (cached) {
     return cached
   }
@@ -26,7 +26,7 @@ export const getAgentById = async (agentId: string): Promise<Agent> => {
   // Check KV for user-created agents
   const kvAgent = await getAgent(agentId)
   if (kvAgent) {
-    await kv.set(cacheKey, kvAgent, { ex: AGENT_CACHE_TTL })
+    await redis.set(cacheKey, kvAgent, { ex: AGENT_CACHE_TTL })
     return kvAgent
   }
 

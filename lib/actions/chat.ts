@@ -1,9 +1,9 @@
 "use server"
-import { kv } from "@vercel/kv"
 import { updateTag } from "next/cache"
 import { getSession } from "@/lib/auth"
 import { isChatOwner } from "@/lib/chat-ownership"
 import { getChatOwnerId, withUser } from "@/lib/data/kv"
+import { redis } from "@/lib/redis"
 
 // Server actions are public HTTP endpoints: every argument is attacker-controlled
 // and ownership has to be read from KV, never from the payload.
@@ -18,7 +18,7 @@ export const shareChatAction = withUser<string, boolean>(async (chatId, userId) 
 
   // Only flip the flag. Writing a client-supplied record here would let the
   // caller rewrite the title or owner.
-  await kv.hset(`chat:${chatId}`, { published: true })
+  await redis.hset(`chat:${chatId}`, { published: true })
   updateTag("chat-list")
   return true
 })
@@ -31,7 +31,7 @@ export const deleteChatAction = withUser<string, boolean>(async (chatId, userId)
   const owned = isChatOwner(await getChatOwnerId(chatId), userId)
   // Dropping the id from the caller's own index is always safe; deleting the
   // record is only allowed for its owner.
-  await Promise.all([owned ? kv.del(`chat:${chatId}`) : null, kv.zrem(`user:chat:${userId}`, `chat:${chatId}`)])
+  await Promise.all([owned ? redis.del(`chat:${chatId}`) : null, redis.zrem(`user:chat:${userId}`, `chat:${chatId}`)])
 
   updateTag("chat-list")
   return owned
@@ -46,13 +46,13 @@ export async function storeEmailAction(email: string) {
     return
   }
 
-  await kv.sadd("emails:list", normalizedEmail)
+  await redis.sadd("emails:list", normalizedEmail)
 
   const session = await getSession()
   const userId = session?.user.id
 
   if (userId) {
-    await kv.hmset(`user:details:${userId}`, {
+    await redis.hmset(`user:details:${userId}`, {
       email_subscribed: true,
     })
   }
@@ -66,24 +66,24 @@ export const getUserFieldAction = withUser<string, string | null>(async (fieldNa
   if (!READABLE_USER_FIELDS.has(fieldName)) {
     return null
   }
-  const value = await kv.hget<string | boolean>(`user:details:${userId}`, fieldName)
+  const value = await redis.hget<string | boolean>(`user:details:${userId}`, fieldName)
   // The client treats any non-null value as "set", so falsy values read as null.
   return value === null || value === undefined || value === false || value === "false" ? null : String(value)
 })
 
 export const clearChatsAction = withUser<void, void>(async (_, userId) => {
-  const chatKeys: string[] = await kv.zrange(`user:chat:${userId}`, 0, -1)
+  const chatKeys: string[] = await redis.zrange(`user:chat:${userId}`, 0, -1)
   if (!chatKeys.length) {
     return
   }
 
-  const ownerLookup = kv.pipeline()
+  const ownerLookup = redis.pipeline()
   for (const key of chatKeys) {
     ownerLookup.hget(key, "userId")
   }
   const owners = await ownerLookup.exec<(string | number | null)[]>()
 
-  const pipeline = kv.pipeline()
+  const pipeline = redis.pipeline()
   chatKeys.forEach((key, index) => {
     if (isChatOwner(owners[index], userId)) {
       pipeline.del(key)
