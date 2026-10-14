@@ -9,6 +9,9 @@ import {
 
 const PASS_MESSAGE = "Pass - Verified"
 const ALREADY_VERIFIED_MESSAGES = ["Smart-contract already verified.", "Contract source code already verified"]
+// The explorer compiled the submission and it did not match the deployed code.
+// Polling the same GUID again can't change that, so the record is retired.
+const DEFINITIVE_FAILURE_MESSAGE = "Fail - Unable to verify"
 const PENDING_MESSAGES = ["Pending in queue", "Already Queued", "In progress", "In queue"]
 const RETRYABLE_SUBMISSION_ERRORS = [
   "Unable to locate ContractCode",
@@ -18,6 +21,8 @@ const RETRYABLE_SUBMISSION_ERRORS = [
 
 const isAlreadyVerified = (value?: string) =>
   Boolean(value && ALREADY_VERIFIED_MESSAGES.some((message) => value.includes(message)))
+
+const isDefinitiveFailure = (value?: string) => Boolean(value?.includes(DEFINITIVE_FAILURE_MESSAGE))
 
 const isPending = (value?: string) => Boolean(value && PENDING_MESSAGES.some((message) => value.includes(message)))
 
@@ -97,6 +102,11 @@ const checkSubmittedVerification = async (verificationData: VerificationQueueIte
     return "pending" as const
   }
 
+  if (isDefinitiveFailure(verificationStatus.result)) {
+    await retireVerification(verificationData.deployHash, verificationStatus.result)
+    return "retired" as const
+  }
+
   await setVerificationFailure(
     verificationData.deployHash,
     verificationAttempts,
@@ -149,6 +159,9 @@ export async function processVerifications() {
         result.submitted += 1
       } else if (status === "pending") {
         result.pending += 1
+      } else if (status === "retired") {
+        result.failed += 1
+        result.terminal += 1
       } else {
         result.failed += 1
       }

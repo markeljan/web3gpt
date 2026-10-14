@@ -33,6 +33,12 @@ mock.module("@/lib/data/kv", () => ({
 mock.module("@/lib/solidity/verification", () => ({
   checkVerifyStatus: (guid: string) => {
     explorerCalls.push(`check:${guid}`)
+    if (guid === "g-mismatch") {
+      return Promise.resolve({ message: "NOTOK", result: "Fail - Unable to verify", status: "0" })
+    }
+    if (guid === "g-other-error") {
+      return Promise.resolve({ message: "NOTOK", result: "Unknown UID", status: "0" })
+    }
     return Promise.resolve({ message: "OK", result: "Pending in queue", status: "0" })
   },
   verifyContract: ({ deployHash }: { deployHash: string }) => {
@@ -127,6 +133,37 @@ describe("processVerifications", () => {
     expect(info).not.toHaveBeenCalled()
     expect(warn).toHaveBeenCalledTimes(1)
     expect(String(warn.mock.calls[0]?.[0])).toContain("[verification-queue] total=5")
+
+    info.mockRestore()
+    warn.mockRestore()
+  })
+
+  test('"Fail - Unable to verify" retires the record at once instead of re-polling it', async () => {
+    const info = spyOn(console, "info").mockImplementation(() => undefined)
+    const warn = spyOn(console, "warn").mockImplementation(() => undefined)
+    const submitted = { lastCheckedAt: NOW - 120_000, verificationAttempts: 1, verificationStatus: "submitted" }
+    seed("0xmismatch", { ...submitted, verificationGuid: "g-mismatch" })
+    seed("0xother", { ...submitted, verificationGuid: "g-other-error" })
+
+    const result = await processVerifications()
+
+    expect(explorerCalls.sort()).toEqual(["check:g-mismatch", "check:g-other-error"])
+    expect(retired).toEqual([{ error: "Fail - Unable to verify", id: "0xmismatch" }])
+    expect(store.has("verification:0xmismatch")).toBe(false)
+    expect(result).toMatchObject({ failed: 2, processed: 2, terminal: 1 })
+    // Other status errors keep their guid and are polled again after a backoff.
+    expect(store.get("verification:0xother")).toMatchObject({
+      lastVerificationError: "Unknown UID",
+      verificationAttempts: 2,
+      verificationGuid: "g-other-error",
+      verificationStatus: "error",
+    })
+
+    now += 10 * 60_000
+    explorerCalls = []
+    await processVerifications()
+    expect(explorerCalls).toEqual(["check:g-other-error"])
+    expect(retired).toHaveLength(1)
 
     info.mockRestore()
     warn.mockRestore()

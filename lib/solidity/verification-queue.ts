@@ -1,3 +1,4 @@
+import { isLongVersion } from "@/lib/solidity/compiler-version"
 import type { VerifyContractParams } from "@/lib/types"
 
 // Pure selection logic for the verification cron. Nothing in here touches KV
@@ -112,6 +113,8 @@ export const parseVerificationEntry = ({ key, data }: VerificationQueueEntry, no
     ok: true,
     record: {
       ...record,
+      // Older records have no compilerVersion; the verifier falls back to the default for them.
+      compilerVersion: isLongVersion(data.compilerVersion) ? data.compilerVersion : undefined,
       encodedConstructorArgs: typeof data.encodedConstructorArgs === "string" ? data.encodedConstructorArgs : "",
       lastCheckedAt: toTimestamp(data.lastCheckedAt, now),
       queuedAt: toTimestamp(data.queuedAt, now),

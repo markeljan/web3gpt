@@ -236,3 +236,20 @@ describe("malformed verification records", () => {
     expect(selection.terminal).toHaveLength(30)
   })
 })
+
+describe("compiler version on verification records", () => {
+  test("new records carry their compiler version and records from before it existed still work", () => {
+    const { selected, terminal } = selectVerifications(
+      [
+        entry("0xnew", { compilerVersion: "v0.8.24+commit.e11b9ed9" }),
+        entry("0xold"),
+        entry("0xjunk", { compilerVersion: 824 }),
+      ],
+      NOW
+    )
+
+    expect(terminal).toEqual([])
+    const versions = Object.fromEntries(selected.map((record) => [record.deployHash, record.compilerVersion]))
+    expect(versions).toEqual({ "0xjunk": undefined, "0xnew": "v0.8.24+commit.e11b9ed9", "0xold": undefined })
+  })
+})

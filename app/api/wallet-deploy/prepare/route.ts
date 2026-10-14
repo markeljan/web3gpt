@@ -44,6 +44,7 @@ export async function POST(request: Request) {
     await storeWalletDeployArtifact(artifactId, {
       abi: compiledContract.abi,
       bytecode: compiledContract.bytecode,
+      compilerVersion: compiledContract.compilerVersion,
       contractName,
       sources: compiledContract.sources,
       standardJsonInput: compiledContract.standardJsonInput,
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       abi: compiledContract.abi,
       artifactId,
       bytecode: compiledContract.bytecode,
+      compilerVersion: compiledContract.compilerVersion,
       standardJsonInput: compiledContract.standardJsonInput,
     })
   } catch (error) {
