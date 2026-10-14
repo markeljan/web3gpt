@@ -29,8 +29,10 @@ jobs:
       - name: Resolve package.json changes
         run: bun install
 
+      # Exits 1 whenever any advisory remains unfixable within range, even after
+      # applying every available fix, so the exit code is not a failure signal.
       - name: Patch vulnerable transitive dependencies within range
-        run: bun audit fix
+        run: bun audit fix || true
 
       - name: Confirm the lockfile is consistent
         run: bun install --frozen-lockfile
