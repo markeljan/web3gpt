@@ -1,4 +1,4 @@
-import { consumeStream, createUIMessageStreamResponse, generateId, type UIMessage } from "ai"
+import { consumeStream, createUIMessageStreamResponse, generateId, toUIMessageStream, type UIMessage } from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 import { streamAgentReply } from "@/lib/agent-chat"
 import { getSession } from "@/lib/auth"
@@ -76,20 +76,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Chat not found" }, { status: 404 })
   }
 
-  const { result } = await streamAgentReply({
+  const { result, tools } = await streamAgentReply({
     agentId,
     callerId: getCallerId({ ip, userId }),
     messages,
     userId,
   })
 
-  const uiStream = result.toUIMessageStream({
+  const uiStream = toUIMessageStream({
     generateMessageId: generateId,
-    // Persistence mode: `onFinish` receives the exact UIMessages the client
+    // Persistence mode: `onEnd` receives the exact UIMessages the client
     // rendered, including tool calls and results (the deployment card with its
     // address, tx hash and explorer links) and reasoning. Collapsing the reply
     // to plain text used to drop all of that from the stored chat.
-    onFinish: async ({ messages: finalMessages }) => {
+    onEnd: async ({ messages: finalMessages }) => {
       if (!(userId && chatId)) {
         return
       }
@@ -111,11 +111,13 @@ export async function POST(request: NextRequest) {
     },
     originalMessages: messages,
     sendReasoning: true,
+    stream: result.stream,
+    tools,
   })
 
   // One branch goes to the client; the server drains the other to the end. If
   // the client disconnects mid-turn (a closed tab during a deployment), its
-  // branch is cancelled but the model, the tools and `onFinish` still run to
+  // branch is cancelled but the model, the tools and `onEnd` still run to
   // completion, so a deployed contract is never missing from the stored chat.
   const [clientStream, persistenceStream] = uiStream.tee()
   consumeStream({

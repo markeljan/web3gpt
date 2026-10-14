@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import type { UIMessage } from "ai"
 import { simulateReadableStream } from "ai"
-import { MockLanguageModelV3 } from "ai/test"
+import { MockLanguageModelV4 } from "ai/test"
 
 // Drives the real /api/chat handler with a scripted model: the first model step
 // calls the deployContract tool, the second answers in text. The stored chat
@@ -16,7 +16,7 @@ const DEPLOY_SUMMARY_START = "Contract deployed on chain ID 80002. Contract addr
 
 const scriptedModel = () => {
   let call = 0
-  return new MockLanguageModelV3({
+  return new MockLanguageModelV4({
     doStream: () => {
       call += 1
       // Typed loosely: the provider stream-part union lives in a transitive package.
