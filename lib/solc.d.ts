@@ -127,7 +127,7 @@ declare module "solc" {
 
   export type Solc = {
     compile: typeof compile
-    /** e.g. "0.8.29+commit.ab55807c.Emscripten.clang" */
+    /** e.g. "0.8.37+commit.f401782d.Emscripten.clang" */
     version: () => string
     /** Downloads soljson-<version>.js from binaries.soliditylang.org, e.g. "v0.8.24+commit.e11b9ed9". */
     loadRemoteVersion: (version: string, callback: (error: Error | null, solc?: Solc) => void) => void
