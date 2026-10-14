@@ -98,11 +98,11 @@ export function ContractsDashboard({
 
   const deploymentsByChain = useMemo(() => {
     const grouped = currentDeployments.reduce<Record<number, number>>((acc, deployment) => {
-      const chainId = deployment.chainId
+      const { chainId } = deployment
       if (!acc[chainId]) {
         acc[chainId] = 0
       }
-      acc[chainId]++
+      acc[chainId] += 1
       return acc
     }, {})
     return grouped
@@ -242,7 +242,7 @@ export function ContractsDashboard({
                   }
                   return `${filteredDeployments.length} deployments`
                 })()}
-                {filters.selectedChain && ` on ${getChainById(filters.selectedChain)?.name}`}
+                {filters.selectedChain ? ` on ${getChainById(filters.selectedChain)?.name}` : null}
               </span>
             </div>
           </div>

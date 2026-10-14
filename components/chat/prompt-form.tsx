@@ -45,9 +45,10 @@ export const PromptForm = ({ onSubmit, stop, onNewChat, isLoading, isEmpty }: Pr
   }, [setHasSeenGuildPrompt])
 
   const handleInputChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    const value = event.target.value
+    const { value } = event.target
     setInput(value)
 
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome narrows useLocalStorage's T to the literal false, but the stored value is true once the banner was dismissed
     if (!hasSeenGuildPrompt && value.trim().length >= GUILD_PROMPT_MIN_CHARS) {
       setIsGuildBannerOpen(true)
     }
@@ -58,9 +59,11 @@ export const PromptForm = ({ onSubmit, stop, onNewChat, isLoading, isEmpty }: Pr
   // is using, and never auto-focus on mount (that pops the mobile keyboard).
   const wasLoading = useRef(false)
   useEffect(() => {
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types useRef(false).current as always false, but it is updated to isLoading on every run
     const finishedLoading = wasLoading.current && !isLoading
     wasLoading.current = isLoading
 
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: follows from the false positive on wasLoading.current above
     if (!finishedLoading) {
       return
     }

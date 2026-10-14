@@ -73,6 +73,7 @@ export const CodeBlock = memo(({ language, isStreaming = false, value }: CodeBlo
     }
 
     if (!isStreaming) {
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types the ref as always null, but it holds a pending timeout between renders
       if (pendingHighlightRef.current) {
         clearTimeout(pendingHighlightRef.current)
         pendingHighlightRef.current = null
@@ -87,6 +88,7 @@ export const CodeBlock = memo(({ language, isStreaming = false, value }: CodeBlo
       return
     }
 
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types the ref as always null, but it holds a pending timeout between renders
     if (!pendingHighlightRef.current) {
       pendingHighlightRef.current = setTimeout(commitHighlight, HIGHLIGHT_UPDATE_INTERVAL_MS - elapsed)
     }
@@ -94,6 +96,7 @@ export const CodeBlock = memo(({ language, isStreaming = false, value }: CodeBlo
 
   useEffect(
     () => () => {
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: Biome types the ref as always null, but it holds a pending timeout until unmount
       if (pendingHighlightRef.current) {
         clearTimeout(pendingHighlightRef.current)
       }

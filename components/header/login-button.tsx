@@ -29,7 +29,9 @@ export function LoginButton({
       variant="outline"
       {...props}
     >
-      {showGithubIcon && (isLoading ? <IconSpinner className="mr-2 animate-spin" /> : <IconGitHub className="mr-2" />)}
+      {showGithubIcon && isLoading ? <IconSpinner className="mr-2 animate-spin" /> : null}
+      {showGithubIcon && !isLoading ? <IconGitHub className="mr-2" /> : null}
+      {/* biome-ignore lint/suspicious/noLeakedRender: `text` is the button label, a string that is meant to render */}
       {!showGithubIcon && isLoading ? <IconSpinner className="mr-1 animate-spin" /> : text}
     </Button>
   )

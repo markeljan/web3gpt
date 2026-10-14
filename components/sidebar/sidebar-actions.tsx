@@ -96,7 +96,7 @@ export function SidebarActions({ chat }: SidebarActionsProps) {
             <div className="text-muted-foreground">{formatDate(chat.createdAt)}</div>
           </div>
           <DialogFooter className="items-center">
-            {chat.published && (
+            {chat.published ? (
               <Link
                 className={cn(badgeVariants({ variant: "secondary" }), "mr-auto")}
                 href={`/share/${chat.id}`}
@@ -106,7 +106,7 @@ export function SidebarActions({ chat }: SidebarActionsProps) {
                 <IconUsers className="mr-2" />
                 {`/share/${chat.id}`}
               </Link>
-            )}
+            ) : null}
             <Button
               disabled={isSharePending}
               onClick={() => {
@@ -158,7 +158,7 @@ export function SidebarActions({ chat }: SidebarActionsProps) {
                 })
               }}
             >
-              {isDeletePending && <IconSpinner className="mr-2 animate-spin" />}
+              {isDeletePending ? <IconSpinner className="mr-2 animate-spin" /> : null}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

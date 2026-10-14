@@ -149,7 +149,7 @@ function getMessageParts(message: UIMessage | LegacyMessage): MessageParts {
 
   // Handle v4 format (content property) for backward compatibility
   if ("content" in message && message.content) {
-    const content = message.content
+    const { content } = message
     if (typeof content === "string") {
       return [{ text: content, type: "text" }]
     }

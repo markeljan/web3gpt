@@ -59,6 +59,7 @@ export default async function ChatPage({ params, searchParams }: NextPageProps) 
 
   return (
     <Chat
+      // biome-ignore lint/suspicious/noUnnecessaryConditions: getAgentById can return a KV value, which is untyped at runtime; keep the fallback
       agent={agent || DEFAULT_AGENT}
       avatarUrl={session.user.image}
       initialChatId={chat.id}

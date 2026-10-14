@@ -50,14 +50,14 @@ const config: NextConfig = {
   serverExternalPackages: ["pino-pretty", "lokijs", "encoding"],
   turbopack: {},
   // Keep webpack config for fallback when using --webpack flag
-  webpack: (config) => {
-    config.externals.push("pino-pretty", "lokijs", "encoding")
+  webpack: (webpackConfig) => {
+    webpackConfig.externals.push("pino-pretty", "lokijs", "encoding")
     // ignore metamask sdk react-native-async-storage errors
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
+    webpackConfig.resolve.fallback = {
+      ...webpackConfig.resolve.fallback,
       "@react-native-async-storage/async-storage": false,
     }
-    return config
+    return webpackConfig
   },
 }
 

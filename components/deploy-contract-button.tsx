@@ -45,7 +45,7 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
     if (!constructorArgsMatch) {
       return []
     }
-    const constructorArgs = constructorArgsMatch[1]
+    const [, constructorArgs] = constructorArgsMatch
     const constructorArgsArray = constructorArgs.split(",")
     return constructorArgsArray.map((arg) => arg.trim())
   }, [sourceCode])
@@ -116,7 +116,7 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
       }
 
       setIsDeploying(false)
-    } catch (_e) {
+    } catch {
       setIsErrorDeploying(true)
       setIsDeploying(false)
     }
@@ -185,24 +185,24 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
             ) : null}
           </div>
           <div className="flex flex-col items-center gap-4">
-            {isErrorDeploying && <p className="text-destructive text-sm">Error deploying contract.</p>}
-            {isDeploying && <IconSpinner className="size-8 animate-spin text-gray-500" />}
-            {explorerUrl && (
+            {isErrorDeploying ? <p className="text-destructive text-sm">Error deploying contract.</p> : null}
+            {isDeploying ? <IconSpinner className="size-8 animate-spin text-gray-500" /> : null}
+            {explorerUrl ? (
               <Link className="text-green-500 text-sm" href={explorerUrl} rel="noopener noreferrer" target="_blank">
                 <div className="flex items-center">
                   View on Explorer
                   <IconExternalLink className="ml-1" />
                 </div>
               </Link>
-            )}
-            {ipfsUrl && (
+            ) : null}
+            {ipfsUrl ? (
               <Link className="text-blue-500 text-sm" href={ipfsUrl} rel="noopener noreferrer" target="_blank">
                 <div className="flex items-center">
                   View on IPFS
                   <IconExternalLink className="ml-1" />
                 </div>
               </Link>
-            )}
+            ) : null}
           </div>
 
           <DialogFooter>
