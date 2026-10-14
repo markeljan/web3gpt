@@ -98,6 +98,20 @@ describe("remote import policy", () => {
 
   test("a disguised internal URL is still refused after mapping", () => {
     expect(() => assertAllowedImportUrl(getImportUrl("http://10.0.0.1/x.sol"))).toThrow(ImportNotAllowedError)
-    expect(() => assertAllowedImportUrl(getImportUrl("internal-service/x.sol"))).toThrow(ImportNotAllowedError)
+    expect(() => assertAllowedImportUrl(getImportUrl("internal.service/x.sol"))).toThrow(ImportNotAllowedError)
+    expect(() => assertAllowedImportUrl(getImportUrl("10.0.0.1/x.sol"))).toThrow(ImportNotAllowedError)
+    expect(() => assertAllowedImportUrl(getImportUrl("localhost:8080/x.sol"))).toThrow(ImportNotAllowedError)
+  })
+
+  test("bare package paths map to unpkg, so a dotless name is never looked up as a host", () => {
+    expect(getImportUrl("solmate/src/tokens/ERC20.sol")).toBe("https://unpkg.com/solmate/src/tokens/ERC20.sol")
+    expect(getImportUrl("forge-std/Test.sol")).toBe("https://unpkg.com/forge-std/Test.sol")
+    expect(getImportUrl("internal-service/x.sol")).toBe("https://unpkg.com/internal-service/x.sol")
+    // Not package names: a single segment, a host name, an upper-case first segment.
+    expect(getImportUrl("Token.sol")).toBe("https://Token.sol")
+    expect(getImportUrl("raw.githubusercontent.com/a/b/main/C.sol")).toBe(
+      "https://raw.githubusercontent.com/a/b/main/C.sol"
+    )
+    expect(() => assertAllowedImportUrl(getImportUrl("Internal/x.sol"))).toThrow(ImportNotAllowedError)
   })
 })

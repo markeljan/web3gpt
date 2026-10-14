@@ -1,7 +1,7 @@
 import "server-only"
 import type { Chain } from "viem"
 import { getChainDetails } from "@/lib/config"
-import { DEFAULT_COMPILER_VERSION } from "@/lib/constants"
+import { getVerificationCompilerVersion } from "@/lib/solidity/compiler-version"
 import type { VerifyContractParams } from "@/lib/types"
 
 type VerifyApiResponse = {
@@ -18,6 +18,7 @@ export const verifyContract = async ({
   encodedConstructorArgs,
   fileName,
   contractName,
+  compilerVersion,
   viemChain,
 }: VerifyContractParams): Promise<VerifyApiResponse> => {
   const { explorerApiUrl, explorerApiKey, explorerType } = getChainDetails(viemChain)
@@ -40,7 +41,7 @@ export const verifyContract = async ({
   params.append("sourceCode", JSON.stringify(standardJsonInput))
   params.append("codeformat", "solidity-standard-json-input")
   params.append("contractname", `${fileName}:${contractName}`)
-  params.append("compilerversion", DEFAULT_COMPILER_VERSION)
+  params.append("compilerversion", getVerificationCompilerVersion(compilerVersion))
   if (encodedConstructorArgs) {
     params.append("constructorArguments", encodedConstructorArgs)
   }
