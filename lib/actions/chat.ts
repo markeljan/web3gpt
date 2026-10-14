@@ -2,31 +2,51 @@
 import { kv } from "@vercel/kv"
 import { updateTag } from "next/cache"
 import { getSession } from "@/lib/auth"
-import { withUser } from "@/lib/data/kv"
-import type { DbChatListItem } from "@/lib/types"
+import { isChatOwner } from "@/lib/chat-ownership"
+import { getChatOwnerId, withUser } from "@/lib/data/kv"
 
-export const shareChatAction = withUser<DbChatListItem, void>(async (chat, userId) => {
-  if (userId !== String(chat.userId)) {
-    return
+// Server actions are public HTTP endpoints: every argument is attacker-controlled
+// and ownership has to be read from KV, never from the payload.
+
+const MAX_EMAIL_LENGTH = 254
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export const shareChatAction = withUser<string, boolean>(async (chatId, userId) => {
+  if (typeof chatId !== "string" || !isChatOwner(await getChatOwnerId(chatId), userId)) {
+    return false
   }
 
-  const payload = {
-    ...chat,
-    published: true,
-  }
-
-  await kv.hmset(`chat:${chat.id}`, payload)
-
-  return updateTag("chat-list")
+  // Only flip the flag. Writing a client-supplied record here would let the
+  // caller rewrite the title or owner.
+  await kv.hset(`chat:${chatId}`, { published: true })
+  updateTag("chat-list")
+  return true
 })
-export const deleteChatAction = withUser<string, void>(async (id, userId) => {
-  await Promise.all([kv.del(`chat:${id}`), kv.zrem(`user:chat:${userId}`, `chat:${id}`)])
 
-  return updateTag("chat-list")
+export const deleteChatAction = withUser<string, boolean>(async (chatId, userId) => {
+  if (typeof chatId !== "string") {
+    return false
+  }
+
+  const owned = isChatOwner(await getChatOwnerId(chatId), userId)
+  // Dropping the id from the caller's own index is always safe; deleting the
+  // record is only allowed for its owner.
+  await Promise.all([owned ? kv.del(`chat:${chatId}`) : null, kv.zrem(`user:chat:${userId}`, `chat:${chatId}`)])
+
+  updateTag("chat-list")
+  return owned
 })
 
 export async function storeEmailAction(email: string) {
-  await kv.sadd("emails:list", email)
+  if (typeof email !== "string") {
+    return
+  }
+  const normalizedEmail = email.trim().toLowerCase()
+  if (normalizedEmail.length > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.test(normalizedEmail)) {
+    return
+  }
+
+  await kv.sadd("emails:list", normalizedEmail)
 
   const session = await getSession()
   const userId = session?.user.id
@@ -38,25 +58,39 @@ export async function storeEmailAction(email: string) {
   }
 }
 
+// Only fields the client legitimately reads. This action used to return any
+// field of the caller's own record, which was harmless but needlessly broad.
+const READABLE_USER_FIELDS = new Set(["email_subscribed"])
+
 export const getUserFieldAction = withUser<string, string | null>(async (fieldName, userId) => {
-  const userKey = `user:details:${userId}`
-  const userDetails = await kv.hgetall<{ [key: string]: string }>(userKey)
-  return userDetails?.[fieldName] || null
+  if (!READABLE_USER_FIELDS.has(fieldName)) {
+    return null
+  }
+  const value = await kv.hget<string | boolean>(`user:details:${userId}`, fieldName)
+  // The client treats any non-null value as "set", so falsy values read as null.
+  return value === null || value === undefined || value === false || value === "false" ? null : String(value)
 })
 
 export const clearChatsAction = withUser<void, void>(async (_, userId) => {
-  const chats: string[] = await kv.zrange(`user:chat:${userId}`, 0, -1)
-  if (!chats.length) {
+  const chatKeys: string[] = await kv.zrange(`user:chat:${userId}`, 0, -1)
+  if (!chatKeys.length) {
     return
   }
-  const pipeline = kv.pipeline()
 
-  for (const chat of chats) {
-    pipeline.del(chat)
-    pipeline.zrem(`user:chat:${userId}`, chat)
+  const ownerLookup = kv.pipeline()
+  for (const key of chatKeys) {
+    ownerLookup.hget(key, "userId")
   }
+  const owners = await ownerLookup.exec<(string | number | null)[]>()
 
+  const pipeline = kv.pipeline()
+  chatKeys.forEach((key, index) => {
+    if (isChatOwner(owners[index], userId)) {
+      pipeline.del(key)
+    }
+    pipeline.zrem(`user:chat:${userId}`, key)
+  })
   await pipeline.exec()
 
-  return updateTag("chat-list")
+  updateTag("chat-list")
 })

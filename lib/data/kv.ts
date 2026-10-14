@@ -1,6 +1,7 @@
 import "server-only"
 import { kv } from "@vercel/kv"
 import { getSession } from "@/lib/auth"
+import { isChatOwner } from "@/lib/chat-ownership"
 import type {
   Agent,
   DbChat,
@@ -68,18 +69,30 @@ export async function getChatList(userId?: string): Promise<DbChatListItem[]> {
   return await pipeline.exec<DbChatListItem[]>()
 }
 
-export const getChat = withUser<string, DbChat | null>(async (id) => await kv.hgetall<DbChat>(`chat:${id}`))
+/** The stored owner of a chat, normalized to a string, or null if the chat does not exist. */
+export const getChatOwnerId = async (id: string): Promise<string | null> => {
+  const owner = await kv.hget<string | number>(`chat:${id}`, "userId")
+  return owner === null || owner === undefined ? null : String(owner)
+}
 
-export async function getPublishedChat(id: string) {
+/** A chat owned by the signed-in user. Any other user's chat reads as missing. */
+export const getChat = withUser<string, DbChat | null>(async (id, userId) => {
   const chat = await kv.hgetall<DbChat>(`chat:${id}`)
-
-  if (!chat?.published) {
-    return {
-      ...chat,
-      messages: [],
-    }
+  if (!(chat && isChatOwner(chat.userId, userId))) {
+    return null
   }
+  return chat
+})
 
+/**
+ * A chat its owner has published, or null. Unpublished chats must not leak any
+ * field, the title included: it is the opening of the first prompt.
+ */
+export async function getPublishedChat(id: string): Promise<DbChat | null> {
+  const chat = await kv.hgetall<DbChat>(`chat:${id}`)
+  if (!chat?.published) {
+    return null
+  }
   return chat
 }
 
@@ -194,15 +207,27 @@ export const storeAgent = withUser<Agent, void>(async (agent, userId) => {
   await Promise.all([kv.hmset(`agent:${agent.id}`, agent), kv.sadd("agents:list", agent.id)])
 })
 
+/**
+ * Writes a chat for the signed-in user. Returns false, writing nothing, when the
+ * caller is not who the record claims or when the chat id already belongs to
+ * someone else. Chat ids come from the client, and published ones are public, so
+ * the stored owner is the only thing that can be trusted.
+ */
 export const storeChat = withUser<
   {
     data: DbChat
     userId: string
   },
-  void
+  boolean
 >(async ({ data, userId }, authenticatedUserId) => {
-  if (authenticatedUserId !== userId || authenticatedUserId !== data.userId) {
-    return
+  if (authenticatedUserId !== userId || authenticatedUserId !== String(data.userId)) {
+    return false
+  }
+
+  // Claim the id atomically if it is new; otherwise it must already be ours.
+  const claimed = await kv.hsetnx(`chat:${data.id}`, "userId", userId)
+  if (!claimed && (await getChatOwnerId(data.id)) !== userId) {
+    return false
   }
 
   // Callers rebuild the whole record on every assistant turn and stamp a fresh
@@ -226,6 +251,8 @@ export const storeChat = withUser<
       score: updatedAt,
     }),
   ])
+
+  return true
 })
 
 export const getUserDeployments = withUser<void, DeploymentRecord[]>(async (_, userId) => {
