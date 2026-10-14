@@ -61,7 +61,7 @@ const stringifyResponseOutput = (output: unknown): string => {
 }
 
 export const getMessageText = (message: Pick<UIMessage, "parts">): string =>
-  (message.parts || [])
+  message.parts
     .filter((part) => part.type === "text")
     .map((part) => ("text" in part ? part.text : ""))
     .join("")
