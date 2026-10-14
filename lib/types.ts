@@ -98,11 +98,12 @@ export type VerifyContractParams = {
   viemChain: Omit<Chain, "contracts" | "ensRegistry" | "ensUniversalResolver" | "multicall3" | "formatters">
   verificationAttempts?: number
   verificationGuid?: string
-  verificationStatus?: "queued" | "submitted" | "verified" | "error"
+  verificationStatus?: "queued" | "submitted" | "verified" | "error" | "failed"
   queuedAt?: number
   submittedAt?: number
   lastCheckedAt?: number
   verifiedAt?: number
+  failedAt?: number
   lastVerificationError?: string
 }
 
