@@ -113,7 +113,7 @@ export const parseVerificationEntry = ({ key, data }: VerificationQueueEntry, no
     ok: true,
     record: {
       ...record,
-      // Older records have no compilerVersion; the verifier falls back to the default for them.
+      // Older records have no compilerVersion; the verifier falls back to LEGACY_COMPILER_VERSION for them.
       compilerVersion: isLongVersion(data.compilerVersion) ? data.compilerVersion : undefined,
       encodedConstructorArgs: typeof data.encodedConstructorArgs === "string" ? data.encodedConstructorArgs : "",
       lastCheckedAt: toTimestamp(data.lastCheckedAt, now),

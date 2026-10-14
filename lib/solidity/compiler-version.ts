@@ -1,5 +1,5 @@
 import semver from "semver"
-import { DEFAULT_COMPILER_VERSION } from "@/lib/constants"
+import { DEFAULT_COMPILER_VERSION, LEGACY_COMPILER_VERSION } from "@/lib/constants"
 import { maskComments } from "@/lib/solidity/source-text"
 
 // Picks the solc release a compilation should use from the `pragma solidity`
@@ -52,10 +52,11 @@ export const isLongVersion = (value: unknown): value is string =>
 /**
  * Compiler version to send with an explorer verification. Records queued
  * before compiler selection existed have none; they were all compiled with
- * the bundled compiler.
+ * the compiler bundled at the time, LEGACY_COMPILER_VERSION (0.8.29), not
+ * whatever is bundled now.
  */
 export const getVerificationCompilerVersion = (compilerVersion: unknown): string =>
-  isLongVersion(compilerVersion) ? compilerVersion : DEFAULT_COMPILER_VERSION
+  isLongVersion(compilerVersion) ? compilerVersion : LEGACY_COMPILER_VERSION
 
 export const toRelease = (longVersion: string): SolcRelease => {
   const match = longVersion.match(LONG_VERSION_REGEX)
@@ -139,11 +140,13 @@ const describeConstraints = (constraints: VersionConstraint[]) => {
 }
 
 /**
- * The EVM version every compile targets: the bundled compiler's default, which
- * is what the supported chains have been running. Newer compilers default to
- * prague (0.8.30) or osaka (0.8.31+), which not every chain supports, and
- * 0.8.24 defaults to shanghai, which rejects the `mcopy` that current
- * OpenZeppelin code (pragma ^0.8.24) uses.
+ * The EVM version every compile targets, pinned rather than left to the
+ * compiler: cancun is what every chain in AGENT_DEPLOY_CHAINS supports and
+ * what contracts have always been compiled for (it was the default of the
+ * previously bundled 0.8.29). Newer compilers, the bundled one included,
+ * default to prague (0.8.30) or osaka (0.8.31+), which not every chain
+ * supports, and 0.8.24 defaults to shanghai, which rejects the `mcopy` that
+ * current OpenZeppelin code (pragma ^0.8.24) uses.
  */
 export const TARGET_EVM_VERSION = "cancun"
 const FIRST_CANCUN_COMPILER = "0.8.24"

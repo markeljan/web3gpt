@@ -128,7 +128,7 @@ async function recordDeployment({
 
   const verifyContractConfig: VerifyContractParams = {
     // Artifacts prepared before compiler selection have no version; the verifier
-    // then uses DEFAULT_COMPILER_VERSION, which is what they were compiled with.
+    // then uses LEGACY_COMPILER_VERSION (0.8.29), which is what they were compiled with.
     ...(artifact.compilerVersion ? { compilerVersion: artifact.compilerVersion } : {}),
     contractAddress,
     contractName: artifact.contractName,

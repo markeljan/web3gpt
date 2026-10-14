@@ -98,7 +98,7 @@ export type VerifyContractParams = {
   /**
    * Full solc version the contract was compiled with, e.g. "v0.8.24+commit.e11b9ed9".
    * Records queued before compiler selection existed don't have it; they were
-   * all compiled with DEFAULT_COMPILER_VERSION.
+   * all compiled with LEGACY_COMPILER_VERSION (0.8.29).
    */
   compilerVersion?: string
   viemChain: Omit<Chain, "contracts" | "ensRegistry" | "ensUniversalResolver" | "multicall3" | "formatters">
