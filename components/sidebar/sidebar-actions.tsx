@@ -117,7 +117,11 @@ export function SidebarActions({ chat }: SidebarActionsProps) {
                     return
                   }
 
-                  await shareChatAction(chat)
+                  const shared = await shareChatAction(chat.id)
+                  if (!shared) {
+                    toast.error("Could not share this chat")
+                    return
+                  }
                   copyShareLink()
                 })
               }}

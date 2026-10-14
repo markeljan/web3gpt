@@ -2,8 +2,9 @@ import type { UIMessage } from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 import { streamAgentReply } from "@/lib/agent-chat"
 import { getSession } from "@/lib/auth"
+import { canWriteChat } from "@/lib/chat-ownership"
 import { buildChatTitle, createTextMessage, getResponseText } from "@/lib/chat-utils"
-import { storeChat } from "@/lib/data/kv"
+import { getChatOwnerId, storeChat } from "@/lib/data/kv"
 import type { DbChat } from "@/lib/types"
 
 export const maxDuration = 60
@@ -20,6 +21,13 @@ export async function POST(request: NextRequest) {
 
   if (!agentId) {
     return NextResponse.json({ error: "Agent ID is required" }, { status: 400 })
+  }
+
+  // Chat ids are chosen by the client and published ones are public. Refuse to
+  // continue someone else's chat up front, before any tokens are spent;
+  // `storeChat` enforces the same rule again at write time.
+  if (userId && chatId && !canWriteChat(await getChatOwnerId(chatId), userId)) {
+    return NextResponse.json({ error: "Chat not found" }, { status: 404 })
   }
 
   const { result } = await streamAgentReply({
