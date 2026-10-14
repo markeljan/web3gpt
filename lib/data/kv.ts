@@ -130,8 +130,27 @@ export const storeAgentDirect = async (agent: Agent): Promise<void> => {
 
 // verifications
 
-export const getVerifications = async () => {
-  const verifications: VerifyContractParams[] = []
+// Live jobs live under `verification:` and are scanned every minute by the
+// cron. Jobs that can never verify are moved under a prefix the scan does not
+// match, so they stop costing anything but remain inspectable until they expire.
+const VERIFICATION_KEY_PREFIX = "verification:"
+const VERIFICATION_TERMINAL_KEY_PREFIX = "verification-failed:"
+const VERIFICATION_TERMINAL_TTL_SECONDS = 7 * 24 * 60 * 60
+
+export type VerificationScanResult = {
+  entries: { key: string; data: unknown }[]
+  unreadable: number
+}
+
+/**
+ * Returns every live `verification:*` hash together with its key. Values are
+ * returned untyped because anything can end up in KV; the cron validates them.
+ * A key that cannot be read as a hash is counted, not thrown, so one bad key
+ * cannot stop the whole queue.
+ */
+export const getVerifications = async (): Promise<VerificationScanResult> => {
+  const entries: VerificationScanResult["entries"] = []
+  let unreadable = 0
   const BATCH_SIZE = 100 // Process 100 keys at a time
   let cursor = 0
 
@@ -139,7 +158,7 @@ export const getVerifications = async () => {
     // Use SCAN instead of KEYS to avoid blocking
     const [nextCursor, keys] = await kv.scan(cursor, {
       count: BATCH_SIZE,
-      match: "verification:*",
+      match: `${VERIFICATION_KEY_PREFIX}*`,
     })
 
     cursor = Number.parseInt(nextCursor, 10)
@@ -148,14 +167,33 @@ export const getVerifications = async () => {
       // Process in batches to avoid "too many keys" error
       const pipeline = kv.pipeline()
       for (const key of keys) {
-        pipeline.hgetall<VerifyContractParams>(key)
+        pipeline.hgetall(key)
       }
-      const batchResults = await pipeline.exec<VerifyContractParams[]>()
-      verifications.push(...batchResults.filter(Boolean))
+      const batchResults = await pipeline.exec({ keepErrors: true })
+      batchResults.forEach(({ error, result }, index) => {
+        if (error) {
+          unreadable += 1
+        } else if (result) {
+          entries.push({ data: result, key: keys[index] })
+        }
+      })
     }
   } while (cursor !== 0)
 
-  return verifications
+  return { entries, unreadable }
+}
+
+/** Marks a verification as terminal and moves it out of the scanned keyspace for a week. */
+export const retireVerification = async (id: string, lastVerificationError: string) => {
+  const key = `${VERIFICATION_KEY_PREFIX}${id}`
+  const terminalKey = `${VERIFICATION_TERMINAL_KEY_PREFIX}${id}`
+
+  await kv
+    .multi()
+    .hset(key, { failedAt: Date.now(), lastVerificationError, verificationStatus: "failed" })
+    .rename(key, terminalKey)
+    .expire(terminalKey, VERIFICATION_TERMINAL_TTL_SECONDS)
+    .exec()
 }
 
 export const deleteVerification = async (deployHash: string) => {

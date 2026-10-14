@@ -1,9 +1,14 @@
-import { deleteVerification, getVerifications, updateVerification } from "@/lib/data/kv"
+import { deleteVerification, getVerifications, retireVerification, updateVerification } from "@/lib/data/kv"
 import { checkVerifyStatus, verifyContract } from "@/lib/solidity/verification"
+import {
+  formatVerificationSummary,
+  type QueuedVerification,
+  selectVerifications,
+  type VerificationRunSummary,
+} from "@/lib/solidity/verification-queue"
 
 const PASS_MESSAGE = "Pass - Verified"
 const ALREADY_VERIFIED_MESSAGES = ["Smart-contract already verified.", "Contract source code already verified"]
-const VERIFICATION_LIMIT = 25
 const PENDING_MESSAGES = ["Pending in queue", "Already Queued", "In progress", "In queue"]
 const RETRYABLE_SUBMISSION_ERRORS = [
   "Unable to locate ContractCode",
@@ -19,7 +24,11 @@ const isPending = (value?: string) => Boolean(value && PENDING_MESSAGES.some((me
 const isRetryableSubmissionError = (value?: string) =>
   Boolean(value && RETRYABLE_SUBMISSION_ERRORS.some((message) => value.includes(message)))
 
-type VerificationQueueItem = Awaited<ReturnType<typeof getVerifications>>[number]
+// Bounds the KV work spent retiring records in one run, so a flood of junk
+// records is drained over several runs instead of stalling a single one.
+const TERMINAL_RETIRE_LIMIT = 100
+
+type VerificationQueueItem = QueuedVerification
 
 const setVerificationFailure = async (
   deployHash: string,
@@ -36,7 +45,7 @@ const setVerificationFailure = async (
 }
 
 const submitVerification = async (verificationData: VerificationQueueItem) => {
-  const verificationAttempts = (verificationData.verificationAttempts || 0) + 1
+  const verificationAttempts = verificationData.verificationAttempts + 1
   const submission = await verifyContract(verificationData)
 
   if (isAlreadyVerified(submission.result)) {
@@ -67,7 +76,7 @@ const submitVerification = async (verificationData: VerificationQueueItem) => {
 }
 
 const checkSubmittedVerification = async (verificationData: VerificationQueueItem) => {
-  const verificationAttempts = (verificationData.verificationAttempts || 0) + 1
+  const verificationAttempts = verificationData.verificationAttempts + 1
   const verificationStatus = await checkVerifyStatus(
     verificationData.verificationGuid || "",
     verificationData.viemChain
@@ -98,20 +107,37 @@ const checkSubmittedVerification = async (verificationData: VerificationQueueIte
   return "failed" as const
 }
 
+const retireTerminalVerifications = async (terminal: ReturnType<typeof selectVerifications>["terminal"]) => {
+  const results = await Promise.allSettled(
+    terminal.slice(0, TERMINAL_RETIRE_LIMIT).map(({ id, error }) => retireVerification(id, error))
+  )
+  const retired = results.filter((outcome) => outcome.status === "fulfilled").length
+  return { retired, retireErrors: results.length - retired }
+}
+
 export async function processVerifications() {
-  const verifications = await getVerifications()
-  const queuedVerifications = verifications.slice(0, VERIFICATION_LIMIT)
-  const result = {
+  const { entries, unreadable } = await getVerifications()
+  const selection = selectVerifications(entries, Date.now())
+  const { retired, retireErrors } = await retireTerminalVerifications(selection.terminal)
+
+  const result: VerificationRunSummary & { success: boolean; verificationCount: number } = {
+    backoff: selection.backoff,
+    byStatus: selection.byStatus,
+    deferred: selection.deferred,
     failed: 0,
     pending: 0,
-    processed: queuedVerifications.length,
+    processed: selection.selected.length,
     submitted: 0,
     success: true,
-    verificationCount: verifications.length,
+    terminal: retired,
+    terminalErrors: retireErrors,
+    total: selection.total,
+    unreadable,
+    verificationCount: selection.total,
     verified: 0,
   }
 
-  for (const verificationData of queuedVerifications) {
+  for (const verificationData of selection.selected) {
     try {
       const status = verificationData.verificationGuid
         ? await checkSubmittedVerification(verificationData)
@@ -127,18 +153,27 @@ export async function processVerifications() {
         result.failed += 1
       }
     } catch (error) {
-      await setVerificationFailure(
-        verificationData.deployHash,
-        (verificationData.verificationAttempts || 0) + 1,
-        verificationData.verificationGuid ? "submitted" : "queued",
-        error instanceof Error ? error.message : "Verification request failed"
-      )
+      try {
+        await setVerificationFailure(
+          verificationData.deployHash,
+          verificationData.verificationAttempts + 1,
+          verificationData.verificationGuid ? "submitted" : "queued",
+          error instanceof Error ? error.message : "Verification request failed"
+        )
+      } catch {
+        // KV is unavailable too; the record is retried on a later run.
+      }
       result.failed += 1
     }
   }
 
-  if (verifications.length > VERIFICATION_LIMIT) {
-    console.error(`Verification queue over limit: ${verifications.length}`)
+  // One line per run so queue health is visible in the cron logs. Warn when
+  // the queue is not keeping up or records are being given up on.
+  const summary = formatVerificationSummary(result)
+  if (result.deferred > 0 || result.terminal > 0 || result.terminalErrors > 0 || result.unreadable > 0) {
+    console.warn(summary)
+  } else {
+    console.info(summary)
   }
 
   return result
