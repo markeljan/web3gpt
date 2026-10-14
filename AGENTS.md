@@ -37,23 +37,28 @@ Primary product flows:
 - Build: `bun run build`
 - Start production server: `bun run start`
 - Typecheck: `bun run typecheck`
+- Test: `bun test`
 - Lint: `bun run lint`
 - Format: `bun run format`
 
 Git hooks are managed by `lefthook.yml`. Pre-commit runs `bunx ultracite fix` on JS/TS/JSON/CSS files.
 
+CI (`.github/workflows/ci.yml`) runs `bun install --frozen-lockfile`, `bun run typecheck`, `bun test`, and `bun run lint` on every pull request and on pushes to `main`. Lint warnings do not fail CI; errors do. CI does not run `next build` because it needs real environment variables.
+
 ## Environment
 
 Copy from `.env.example`. Important groups:
 
-- RPC and explorer access: `NEXT_PUBLIC_ALCHEMY_API_KEY`, `NEXT_PUBLIC_TENDERLY_API_KEY`, `BLOCKSCOUT_API_KEY`, `ETHERSCAN_API_KEY`
+- RPC and explorer access: `NEXT_PUBLIC_ALCHEMY_API_KEY`, `NEXT_PUBLIC_TENDERLY_API_KEY`, `BLOCKSCOUT_API_KEY`, `ETHERSCAN_API_KEY` (legacy fallbacks: `NEXT_PUBLIC_BLOCKSCOUT_API_KEY`, `NEXT_PUBLIC_ETHERSCAN_API_KEY`)
+- RPC overrides (optional): `NEXT_PUBLIC_POLYGON_AMOY_RPC_URL` (wallet client), `POLYGON_AMOY_RPC_URL` and `POLYGON_MAINNET_RPC_URL` (server deployments)
+- Domain resolution: `INFURA_API_KEY` (server-only; `NEXT_PUBLIC_INFURA_API_KEY` is read as a legacy fallback)
 - Wallet connectivity: `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 - Auth: `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET` (Better Auth also accepts `BETTER_AUTH_GITHUB_ID`, `BETTER_AUTH_GITHUB_SECRET`, `BETTER_AUTH_SECRET`)
-- AI providers: `OPENAI_API_KEY`, optional `XAI_API_KEY`, `STABILITY_API_KEY`
-- Persistence: `KV_REST_API_URL`, `KV_REST_API_TOKEN`, `KV_REST_API_READ_ONLY_TOKEN`, `KV_URL`
+- AI provider: `OPENAI_API_KEY` (read implicitly by `@ai-sdk/openai`)
+- Persistence: `KV_REST_API_URL`, `KV_REST_API_TOKEN` (read implicitly by `@vercel/kv`); `KV_REST_API_READ_ONLY_TOKEN` and `KV_URL` are provisioned by the Vercel KV integration but not read by the app
 - Deployment/signing: `DEPLOYER_PRIVATE_KEY`
 - Cron auth: `CRON_SECRET`
-- IPFS uploads: `PINATA_JWT` and `NEXT_PUBLIC_IPFS_GATEWAY` (`PINATA_API_KEY`/`PINATA_API_SECRET` are legacy and unused by the app)
+- IPFS uploads: `PINATA_JWT` and `NEXT_PUBLIC_IPFS_GATEWAY`
 
 Notes:
 
@@ -117,7 +122,7 @@ Notes:
 - Avoid changing `components/ui/*` unless the shared primitive itself needs to change.
 - Keep client/server boundaries explicit. Files under `lib/data/*` and `lib/solidity/*` are server-oriented; interactive chat and wallet code live in client components/hooks.
 - When editing deployment logic, trace both the user-facing chat tool path and the public API route path.
-- There are currently no automated test files in the repo; rely on targeted manual verification plus `bun run typecheck` and `bun run lint`.
+- Unit tests use `bun:test` and live in `test/*.test.ts` plus colocated `*.test.ts` files (e.g. `lib/solidity/deployment-tool-result.test.ts`); run them with `bun test`. Add or update tests for logic changes, and back them with targeted manual verification for flows that need real services (KV, OpenAI, RPC).
 
 ## Safe Edit Checklist
 
@@ -132,6 +137,9 @@ Notes:
 Minimum validation after non-trivial code changes:
 
 - `bun run typecheck`
+- `bun test`
 - `bun run lint`
+
+CI runs the same three checks on every pull request.
 
 For UI or route changes, also run the app with `bun dev` and verify the affected flow in the browser.

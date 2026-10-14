@@ -1,7 +1,9 @@
 import "server-only"
 import { Resolution } from "@unstoppabledomains/resolution"
 
-const INFURA_API_KEY = process.env.NEXT_PUBLIC_INFURA_API_KEY
+// Server-only: prefer the unprefixed name so the key is never inlined into client bundles.
+// NEXT_PUBLIC_INFURA_API_KEY is kept as a fallback for existing deployments.
+const INFURA_API_KEY = process.env.INFURA_API_KEY || process.env.NEXT_PUBLIC_INFURA_API_KEY
 
 const resolution = new Resolution({
   sourceConfig: {
