@@ -1,151 +1,233 @@
 # AGENTS.md
 
-## Overview
+The working guide to this codebase for people and coding agents. It covers architecture,
+invariants that must not be broken, and conventions. The [README](README.md) covers what the
+product is and how to run it.
 
-Web3GPT is a single-app Next.js 16 project for AI-assisted smart contract development. The app combines:
+## What this is
 
-- App Router pages and API routes
-- AI SDK chat flows backed by OpenAI models
-- GitHub authentication via Better Auth
-- Wallet connectivity through Wagmi and RainbowKit
-- Contract compilation/deployment helpers built on `solc` and `viem`
-- Persistence in Vercel KV for users, chats, agents, deployments, and verification jobs
+Web3GPT is a single Next.js 16 (App Router) app. AI agents write, compile, deploy and verify
+Solidity contracts. People use it in the browser at w3gpt.ai, and other agents use it through
+the public skill API (`/api/skill`).
 
-Primary product flows:
+| Concern | Choice |
+| --- | --- |
+| Runtime / package manager | Bun (`bun.lock` is committed) |
+| Framework | Next.js 16 App Router, React 19, TypeScript (strict) |
+| UI | Tailwind CSS 4 (configured in `app/globals.css`), Radix UI, shadcn-style primitives in `components/ui/` |
+| AI | Vercel AI SDK 7 (`ai`, `@ai-sdk/react`, `@ai-sdk/openai`), OpenAI Responses API, model from `lib/ai-model.ts` |
+| Auth | Better Auth, GitHub provider, stateless cookie sessions |
+| Web3 | viem, wagmi 2 + RainbowKit (wallet deploys), `solc` (compiles) |
+| Storage | Upstash Redis over REST (`@upstash/redis`; shared client in `lib/redis.ts`) |
+| Files | Pinata (public IPFS) |
+| Lint / format | Ultracite (Biome) |
 
-- Chat with built-in or user-created agents
-- Deploy Solidity contracts to supported EVM testnets
-- Persist chats for signed-in users and share published chats
-- Run a Vercel cron to process contract verifications
+## Commands
 
-## Stack
+```bash
+bun install
+bun dev              # :3000
+bun run typecheck
+bun run test         # = bun test --isolate (see Testing)
+bun run lint         # must report 0 errors and 0 warnings
+bun run format       # ultracite fix
+bun run build        # needs env vars; see .env.example
+```
 
-- Runtime/package manager: Bun (`bun.lock` is committed)
-- Framework: Next.js 16 App Router
-- Language: TypeScript with strict mode
-- UI: React 19, Tailwind CSS, Radix UI, shadcn/ui-style primitives
-- AI: Vercel AI SDK (`ai`, `@ai-sdk/react`, `@ai-sdk/openai`)
-- Auth: `better-auth` with GitHub provider, stateless (cookie) sessions
-- Web3: `wagmi`, `viem`, `@rainbow-me/rainbowkit`
-- Storage/services: `@vercel/kv`, Vercel Analytics, Pinata
-- Lint/format: Ultracite/Biome
+CI (`.github/workflows/ci.yml`) runs `bun install --frozen-lockfile`, typecheck, test and lint
+on every PR and on pushes to `main`. It does not run `next build`, because the build needs real
+environment variables. `lib/solidity/deploy.ts` reads `DEPLOYER_PRIVATE_KEY` at module load.
+Lefthook runs `bunx ultracite fix` on the staged JS/TS/JSON/CSS files before each commit.
 
-## Common Commands
-
-- Install: `bun install`
-- Dev server: `bun dev`
-- Build: `bun run build`
-- Start production server: `bun run start`
-- Typecheck: `bun run typecheck`
-- Test: `bun run test` (runs `bun test --isolate`)
-- Lint: `bun run lint`
-- Format: `bun run format`
-
-Git hooks are managed by `lefthook.yml`. Pre-commit runs `bunx ultracite fix` on JS/TS/JSON/CSS files.
-
-CI (`.github/workflows/ci.yml`) runs `bun install --frozen-lockfile`, `bun run typecheck`, `bun run test`, and `bun run lint` on every pull request and on pushes to `main`. Lint warnings do not fail CI; errors do. Every rule the Ultracite upgrade relaxed is back to `error`, and the codebase has zero warnings, so keep it that way. CI does not run `next build` because it needs real environment variables.
-
-## Environment
-
-Copy from `.env.example`. Important groups:
-
-- RPC and explorer access: `NEXT_PUBLIC_ALCHEMY_API_KEY`, `NEXT_PUBLIC_TENDERLY_API_KEY`, `BLOCKSCOUT_API_KEY`, `ETHERSCAN_API_KEY` (legacy fallbacks: `NEXT_PUBLIC_BLOCKSCOUT_API_KEY`, `NEXT_PUBLIC_ETHERSCAN_API_KEY`)
-- RPC overrides (optional): `NEXT_PUBLIC_POLYGON_AMOY_RPC_URL` (wallet client), `POLYGON_AMOY_RPC_URL` and `POLYGON_MAINNET_RPC_URL` (server deployments)
-- Domain resolution: `INFURA_API_KEY` (server-only; `NEXT_PUBLIC_INFURA_API_KEY` is read as a legacy fallback)
-- Wallet connectivity: `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
-- Auth: `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET` (Better Auth also accepts `BETTER_AUTH_GITHUB_ID`, `BETTER_AUTH_GITHUB_SECRET`, `BETTER_AUTH_SECRET`)
-- AI provider: `OPENAI_API_KEY` (read implicitly by `@ai-sdk/openai`)
-- Persistence: `KV_REST_API_URL`, `KV_REST_API_TOKEN` (read implicitly by `@vercel/kv`); `KV_REST_API_READ_ONLY_TOKEN` and `KV_URL` are provisioned by the Vercel KV integration but not read by the app
-- Deployment/signing: `DEPLOYER_PRIVATE_KEY`
-- Cron auth: `CRON_SECRET`
-- IPFS uploads: `PINATA_JWT` and `NEXT_PUBLIC_IPFS_GATEWAY`
-
-Notes:
-
-- `lib/solidity/deploy.ts` assumes `DEPLOYER_PRIVATE_KEY` is present at module load.
-- Explorer verification prefers server-side `BLOCKSCOUT_API_KEY` and `ETHERSCAN_API_KEY`, with `NEXT_PUBLIC_*` explorer keys only as fallback for older environments.
-- `vercel.json` schedules `/api/cron` every minute and expects `Authorization: Bearer <CRON_SECRET>`.
-
-## Project Map
+## Map
 
 - `app/`
-  - `app/page.tsx`: landing chat entry, chooses agent from `?a=...`
-  - `app/chat/[id]/page.tsx`: authenticated saved-chat route (legacy `thread_*` ids are ordinary KV chats)
-  - `app/share/[id]/page.tsx`: public published-chat view
-  - `app/contracts/page.tsx`: deployments dashboard
-  - `app/api/chat/route.ts`: main streaming chat endpoint with tool calling
-  - `app/api/skill/route.ts`: public skill endpoint for starting/continuing agent chats by `chatId`
-  - `app/api/cron/route.ts`: verification processor for Vercel Cron
+  - `page.tsx`: chat entry point; `?a=<agentId>` selects the agent
+  - `chat/[id]`: a signed-in user's saved chat (owner only)
+  - `share/[id]`: a published chat (public, read-only)
+  - `contracts/`: public dashboard of recorded deployments
+  - `api/chat`: streaming chat for the browser (AI SDK UI message stream)
+  - `api/skill`: public JSON chat API for other agents (`GET`/`POST`, `chatId` is the secret)
+  - `api/wallet-deploy/{prepare,finalize}`: compile for, then record, a user-signed deployment
+  - `api/cron`: Vercel cron that drives the verification queue
+  - `api/stats`, `api/og`, `api/api-docs`, `api/farcaster`, `api/auth/[...all]`
 - `components/`
-  - `components/chat/*`: chat shell, list, composer, actions
-  - `components/header/*` and `components/sidebar/*`: persistent app chrome
-  - `components/providers/web3-provider.tsx`: Wagmi, RainbowKit, React Query setup
-  - `components/ui/*`: shared UI primitives; most are shadcn-style wrappers
+  - `chat/`: chat shell, message rendering (text, reasoning, tool parts), composer
+  - `header/`, `sidebar/`: app chrome
+  - `providers/web3-provider.tsx`: wagmi, RainbowKit, React Query
+  - `ui/`: shared primitives; change only when the primitive itself must change
 - `lib/`
-  - `lib/constants.ts`: built-in agents, supported chains, RPC URLs
-  - `lib/config.ts`: Wagmi config and chain/explorer helpers
-  - `lib/tools.ts`: AI tool definitions exposed to agents
-  - `lib/data/kv.ts`: KV persistence and auth-scoped data access
-  - `lib/data/agents.ts`: agent lookup
-  - `lib/solidity/*`: compile, deploy, verification helpers
-  - `lib/actions/*`: server-side actions for chat, deploy, domain resolution, verification
-- `public/openapi.json`: API schema for docs/reference
-- `lib/auth.ts`: Better Auth server instance and `getSession()`
-  - `lib/auth-client.ts`: Better Auth browser client (`signIn`, `signOut`, `useSession`)
+  - `constants.ts`: built-in agents, chains, RPC URLs, compiler default
+  - `config.ts`: chain lookup, explorer details, app URLs
+  - `agent-chat.ts`: system prompt, history window, `streamAgentReply` / `generateAgentReply`
+  - `ai-model.ts`: the OpenAI model (`gpt-6-luna`, overridable with `AI_MODEL`)
+  - `tools.ts`: tools the model can call (`deployContract`, `resolveDomain`, `resolveAddress`,
+    `createAgent`)
+  - `redis.ts`: the one Redis client (reads `UPSTASH_REDIS_REST_*`, falls back to `KV_REST_API_*`)
+  - `data/kv.ts`: all persistence, with ownership checks; `data/agents.ts`, `data/ipfs.ts`
+  - `solidity/`: import resolution, compiler selection and loading, compile, deploy,
+    verification queue
+  - `rate-limit.ts`, `deploy-limits.ts`: abuse limits
+  - `chat-ownership.ts`: ownership rules for stored chats
+  - `auth.ts` (server), `auth-client.ts` (browser)
+- `public/skill.md`, `public/openapi.json`: public API docs (keep both in sync with `api/skill`)
+- `test/`: unit tests
 
-## Architecture Notes
+## Invariants
 
-- Auth is Better Auth in stateless mode: there is no auth database, sessions are encrypted into a cookie, and user records are written to KV by `storeUser`.
-- `session.user.id` is pinned to the GitHub numeric profile id (the value next-auth used). `mapProfileToUser` copies it onto the `githubId` additional field and the `user.create.before` database hook forces it as the record id. Every KV key is scoped by this id, so do not let Better Auth generate its own user ids.
-- The `oAuthProxy` plugin routes OAuth callbacks through the origin the GitHub OAuth app registered, replacing next-auth's `AUTH_REDIRECT_PROXY_URL`. `OAUTH_CALLBACK_ORIGIN` in `lib/auth.ts` resolves it with no env var to manage:
-  - On Vercel it is `PRODUCTION_URL` (`lib/config.ts`), derived from `VERCEL_PROJECT_PRODUCTION_URL`, which Vercel injects into every deployment including previews. Correct for forks too, since each fork gets its own value.
-  - Locally it is `PRODUCTION_URL` when `AUTH_GITHUB_ID` is this project's OAuth app, so core-team local sign-in proxies through production the way it always has.
-  - Locally it is the local origin for any other `AUTH_GITHUB_ID`, so a fork running its own OAuth app with a `http://localhost:3000/api/auth/callback/github` callback signs in directly, with the proxy short-circuited.
-- Only the client *secret* is sensitive; `PROJECT_GITHUB_CLIENT_ID` in `lib/auth.ts` is public and appears in every authorize URL.
-- `app/layout.tsx` is `force-dynamic` because it resolves the session from request headers on every render.
-- Built-in agents live in `lib/constants.ts`; user-created agents are stored in KV.
-- `app/api/chat/route.ts` builds a system prompt from the selected agent and attaches tools from `lib/tools.ts`.
-- `app/api/skill/route.ts` persists anonymous agent chats in KV by `chatId` and returns simplified responses/history for SDK and skill consumers.
-- Chat history is persisted only when a user is signed in and a `chatId` is present.
-- Abuse limits live in `lib/rate-limit.ts` (fixed-window counters on KV) and `lib/deploy-limits.ts`. `/api/chat`, `/api/skill` and `/api/wallet-deploy/*` are rate limited per IP or user. The `deployContract` tool is metered per caller (`user:<id>` or `ip:<addr>`) because the server wallet pays the gas. Mainnet (any chain viem doesn't flag as a testnet) also has a shared daily budget and fails closed if KV is unreachable. New public routes and new server-wallet tools must be metered the same way.
-- `lib/actions/*` modules that are only called from server code must not be marked `"use server"`: that can expose every export as a public action endpoint. Server actions that are exposed must read ownership from KV, never from their arguments.
-- Remote Solidity imports are fetched only from `unpkg.com`, `cdn.jsdelivr.net` and `raw.githubusercontent.com` (GitHub blob URLs are rewritten), over https, with a timeout and caps on size and count (`lib/solidity/utils.ts`).
-- Compiler selection (`lib/solidity/compiler-version.ts`, `lib/solidity/solc-loader.ts`): the `pragma solidity` lines of the contract and all its imports pick the compiler. The bundled `solc` (0.8.29, `DEFAULT_COMPILER_VERSION`) is used whenever it satisfies them; otherwise the newest satisfying release from `binaries.soliditylang.org/bin/list.json` (cached for an hour) is downloaded, checked against the published sha256, and cached per version for the life of the instance. Releases older than 0.4.11 are refused. Compilers that support it target `evmVersion: "cancun"`, the bundled default. The full version string (`v0.8.24+commit.e11b9ed9`) is stored on the verification record as `compilerVersion`; records without it are verified with `DEFAULT_COMPILER_VERSION`.
-- Imports are parsed in all four Solidity forms (`import "x";`, `import "x" as Y;`, `import * as Y from "x";`, `import {A, B} from "x";`, multi-line too), ignoring comments; rewriting to flat file names only replaces the path literal. Bare npm package paths (`solmate/src/...`, `forge-std/...`) are fetched from unpkg like `@`-scoped ones.
-- `/api/wallet-deploy/finalize` re-reads the transaction and receipt from the chain and records only what the chain says, after checking that the creation input starts with the bytecode the server compiled.
-- Contract deployment flow compiles Solidity, deploys with a server-side private key, uploads artifacts to IPFS, stores verification metadata, and later verifies via cron.
-- `lib/data/ipfs.ts` uses the Pinata SDK v2 (`pinata.upload.public.*` builder chain, returns `cid`). Uploads go to the **public** network and the `W3GPT` group; the private network would need signed URLs and must not be used for contract artifacts.
-- `NEXT_PUBLIC_IPFS_GATEWAY` includes the protocol because `getIpfsUrl` builds public links from it; the SDK wants a bare domain, so the protocol is stripped when constructing the client.
-- The dedicated gateway (`ipfs.w3gpt.ai`) must stay free of Gateway Access Controls. Adding a gateway key makes every generated `ipfsUrl` fail with 401 `ERR_ID:00024`, and the key cannot be added to the URLs because those links are shown to end users. Default `restrict: true` (serve only account-pinned CIDs) is correct and fine.
-- Wallet-visible chains live separately from agent deploy chains; Polygon mainnet is agent-only and should not be added to Wagmi connectors.
-- The OpenAI Assistants API is no longer used, and the `openai` package is no longer a dependency. Old `thread_*` chats and `asst_*` agents (full message history, agent instructions, and tool names) were migrated into KV, so they are read/write like any other chat. Legacy `thread_*`/`asst_*` ids are just KV ids now; never reintroduce `openai.beta`.
+These rules come from real incidents or security fixes. Breaking them reintroduces the bug.
 
-## Working Conventions
+### Identity and ownership
 
-- Prefer Bun for local commands.
-- Keep imports using the `@/` alias.
-- Follow existing semicolon-free formatting and Biome/Ultracite rules.
-- Avoid changing `components/ui/*` unless the shared primitive itself needs to change.
-- Keep client/server boundaries explicit. Files under `lib/data/*` and `lib/solidity/*` are server-oriented; interactive chat and wallet code live in client components/hooks.
-- When editing deployment logic, trace both the user-facing chat tool path and the public API route path.
-- Unit tests use `bun:test` and live in `test/*.test.ts` plus colocated `*.test.ts` files (e.g. `lib/solidity/deployment-tool-result.test.ts`); run them with `bun run test`. It passes `--isolate` because tests use `mock.module`, which is process-wide in Bun: without isolation one file's mock of a module (e.g. `@/lib/data/kv`) leaks into other files depending on discovery order, which differs between machines. Add or update tests for logic changes, and back them with targeted manual verification for flows that need real services (KV, OpenAI, RPC).
+- `session.user.id` is the user's numeric GitHub id, the value next-auth used, and every Redis
+  key is scoped by it. `mapProfileToUser` copies it to `githubId`, and the `user.create.before`
+  hook forces it as the record id, recovering it from the avatar URL if needed. Never let Better
+  Auth mint its own ids.
+- Chat ids come from the client, and published ids are public. Ownership is always read from the
+  stored record (`getChatOwnerId`), never from a request: `storeChat` claims new ids with
+  `HSETNX` and refuses foreign ones; share, delete and clear check the stored owner;
+  `getPublishedChat` returns nothing for unpublished chats.
+- Redis deserializes values automatically (the client in `lib/redis.ts` keeps the options
+  `@vercel/kv` used), so numeric ids come back as numbers. Compare owners with `isChatOwner` /
+  `normalizeOwnerId`. Never construct a second Redis client; import `redis` from `@/lib/redis`.
+- Exported functions in a `"use server"` file are public HTTP endpoints. Modules that only
+  server code calls (`lib/actions/deploy-contract.ts`, `lib/actions/verification.ts`) are plain
+  `server-only` modules. Real server actions (`lib/actions/chat.ts`) treat every argument as
+  attacker-controlled.
 
-## Safe Edit Checklist
+### Money and abuse
 
-- For chat behavior, inspect both `components/chat/*` and `app/api/chat/route.ts`.
-- For auth-sensitive changes, review `lib/auth.ts`, `lib/auth-client.ts`, and any `getSession()` call sites.
-- For chain/deployment changes, review `lib/constants.ts`, `lib/config.ts`, `lib/solidity/deploy.ts`, and verification helpers together.
-- For data model changes in chats/agents/deployments, audit `lib/types.ts` and `lib/data/kv.ts` before editing route or UI code.
-- For public API changes, update both `public/openapi.json` and `public/skill.md`.
+- Agent deployments are signed by `DEPLOYER_PRIVATE_KEY`, so the server pays. The
+  `deployContract` tool is metered per caller (`user:<id>` or `ip:<addr>`) in
+  `lib/deploy-limits.ts`. Mainnet is any chain viem doesn't flag `testnet`. It has a per-caller
+  and a shared daily budget, and fails closed if Redis is unreachable.
+- `/api/chat`, `/api/skill` and `/api/wallet-deploy/*` are rate limited (`lib/rate-limit.ts`,
+  fixed windows in Redis). Meter any new public route or server-wallet tool the same way.
+- The model sees only the last 40 messages (`toModelWindow`), and never a client-supplied
+  `system` message: those are dropped, because history comes from the client and AI SDK 7 rejects
+  system messages in `messages`. The system prompt is built on the server from the agent.
+  `/api/chat` caps the body at 1 MB; `/api/skill` caps messages at 50k characters.
 
-## Validation
+### Deployments
 
-Minimum validation after non-trivial code changes:
+- A server-side deployment is reported and recorded only after a successful contract-creation
+  receipt (`getDeployedContractAddress`).
+- `/api/wallet-deploy/finalize` records only what the chain reports. It re-reads the transaction
+  and receipt, requires the creation input to start with the bytecode the server compiled, and
+  derives address, deployer and constructor args from the chain. A Redis lock prevents
+  double-recording.
+- Polygon mainnet is available to agents only. Wallet-visible chains (`SUPPORTED_CHAINS`) are
+  kept separate from agent chains (`AGENT_DEPLOY_CHAINS`).
+- Retired chains (e.g. Celo Alfajores, 44787) go in `RETIRED_CHAINS`: `getChainById` no longer
+  returns them, so nothing can deploy there, but `getDisplayChainById` still names them for past
+  records on `/contracts` and `/api/stats`. Don't link to an explorer that now redirects to
+  another chain. Before adding or keeping a chain, check its RPC answers `eth_chainId`.
 
-- `bun run typecheck`
-- `bun run test`
-- `bun run lint`
+### Solidity
 
-CI runs the same three checks on every pull request.
+- Remote imports are fetched only from `unpkg.com`, `cdn.jsdelivr.net` and
+  `raw.githubusercontent.com` (GitHub blob URLs are rewritten), over https, with timeouts and
+  size and count caps. Re-check redirects against the allowlist.
+- All four import forms are parsed, multi-line included, and comments are ignored. Rewriting to
+  flat file names replaces only the path literal, so aliases and symbol lists survive. Bare npm
+  paths (`solmate/…`, `forge-std/…`) resolve through unpkg.
+- The compiler is chosen from every `pragma solidity` in the contract and its imports. The
+  bundled `solc` 0.8.37 (`DEFAULT_COMPILER_VERSION`) is used when it satisfies them. Otherwise
+  the newest satisfying release is downloaded from binaries.soliditylang.org, checked against its
+  published sha256 (refused without one), and cached per version. Versions before 0.4.11 are
+  refused.
+- Compiles are pinned to `evmVersion: "cancun"`. Newer solc defaults to osaka, which not every
+  deploy chain supports.
+- The full compiler version is stored on each verification record as `compilerVersion`, and
+  verification uses it. Records from before that field existed are verified with
+  `LEGACY_COMPILER_VERSION` (0.8.29, what they were built with). That constant must never change
+  when the bundled compiler is upgraded.
 
-For UI or route changes, also run the app with `bun dev` and verify the affected flow in the browser.
+### Verification queue
+
+- `/api/cron` runs every minute. Selection is pure and tested
+  (`lib/solidity/verification-queue.ts`): fresh deployments go first, retries back off
+  exponentially, and records are retired after 10 attempts, when malformed, or when an
+  explorer says "Fail - Unable to verify". Retired records move to `verification-failed:*` with
+  a 7-day TTL, so they never block the queue.
+- Scans of `verification:*` and `deployment:*` survive a key that isn't a hash: @upstash/redis
+  throws on WRONGTYPE inside a `keepErrors` pipeline, so `readHashes` falls back to key-by-key
+  reads and counts or skips the bad key. Network errors still throw.
+
+### Chat persistence
+
+- `/api/chat` stores the exact UI messages the client rendered (`toUIMessageStream` with
+  `originalMessages` and `onFinish`), tool results included. The UI stream is teed and the server
+  drains its own copy, so a client disconnect can't truncate what is stored. Stored messages
+  from AI SDK 6 load unchanged under v7. Some old stored chats still use the v4 `content` shape;
+  `toUIMessages` (`lib/chat-utils.ts`) converts them.
+- `/api/skill` builds its reply from `result.responseMessages` (all steps), not
+  `result.response.messages`, which in v7 covers only the final step.
+- Only signed-in users with a `chatId` are persisted in the browser flow. Skill chats are stored
+  by `chatId` regardless.
+
+### IPFS
+
+- Artifacts go to Pinata's **public** network (group `W3GPT`). The dedicated gateway
+  (`ipfs.w3gpt.ai`) must not have Gateway Access Controls: a gateway key makes every public
+  `ipfsUrl` return 401.
+- `NEXT_PUBLIC_IPFS_GATEWAY` includes the protocol (links are built from it). The SDK gets the
+  bare domain.
+
+### History
+
+- The OpenAI Assistants API is gone. Legacy `thread_*` chats and `asst_*` agents were migrated
+  into Redis and are ordinary records. Never reintroduce `openai.beta`.
+
+## Auth details
+
+- The `oAuthProxy` plugin bounces GitHub callbacks through the origin registered on the OAuth
+  app. `OAUTH_CALLBACK_ORIGIN` in `lib/auth.ts`:
+  - **On Vercel:** `PRODUCTION_URL`, derived from `VERCEL_PROJECT_PRODUCTION_URL`. This holds for
+    previews and forks too.
+  - **Locally, with this project's OAuth app:** `PRODUCTION_URL`.
+  - **Locally, with any other OAuth app:** the local origin, so forks sign in directly against
+    `http://localhost:3000/api/auth/callback/github`.
+- `PROJECT_GITHUB_CLIENT_ID` is public; only the secret is sensitive.
+- `app/layout.tsx` is `force-dynamic` because it reads the session from request headers.
+
+## Testing
+
+- Tests use `bun:test` in `test/*.test.ts` and colocated `*.test.ts` files. Run them with
+  `bun run test`, which passes `--isolate`. `mock.module` is process-wide in Bun, so without
+  isolation one file's mock leaks into others depending on file discovery order. That happened
+  in CI, and it differs between machines.
+- Pure logic (selection, limits, ownership, compiler choice, import parsing) gets direct unit
+  tests. Route handlers are tested with in-memory fakes: mock `@/lib/redis` (export `{ redis }`)
+  and use `MockLanguageModelV4` from `ai/test`, as `test/chat-persistence.test.ts` does.
+- Flows that need real services (Redis, OpenAI, RPC, explorers) also need a targeted manual
+  check. The fastest end-to-end check is a skill-API conversation that deploys a small contract
+  to Polygon Amoy.
+
+## Conventions
+
+- Bun for everything; `@/` imports; semicolon-free formatting; let Ultracite fix style.
+- Styling is Tailwind 4: theme tokens, plugins and animations live in `app/globals.css` (there
+  is no `tailwind.config.ts`). Colour tokens are full colours, so write `var(--primary)`, never
+  `hsl(var(--primary))`.
+- Lint is at zero warnings and every rule is an error. Suppress only with a targeted
+  `biome-ignore` that states the reason.
+- Keep client and server boundaries explicit: `lib/data/*` and `lib/solidity/*` are server-only;
+  wallet and chat UI code lives in client components and hooks.
+- When changing deployment logic, trace both paths: the agent tool (`lib/tools.ts` →
+  `lib/solidity/deploy.ts`) and the wallet flow (`api/wallet-deploy/*` +
+  `lib/hooks/use-wallet-deploy.ts`).
+- When changing the public API, update `public/skill.md` and `public/openapi.json` together.
+- Commits use conventional-commit subjects with a body that explains why. PRs say what was
+  tested and what still needs checking in production.
+
+## Checklist by area
+
+- **Chat:** `components/chat/*`, `app/api/chat/route.ts`, `app/api/skill/route.ts`,
+  `lib/agent-chat.ts`, `lib/chat-utils.ts`.
+- **Auth:** `lib/auth.ts`, `lib/auth-client.ts`, every `getSession()` caller.
+- **Chains / deploys:** `lib/constants.ts`, `lib/config.ts`, `lib/solidity/deploy.ts`,
+  explorers (`lib/blockscout.ts`, `lib/etherscan.ts`), `lib/deployment-analytics.ts`.
+- **Data model:** `lib/types.ts` and `lib/data/kv.ts` before any route or UI.
+- **Dependencies:** wagmi stays on 2.x until RainbowKit ships wagmi 3 support (RainbowKit 2.2.x
+  peers on `wagmi ^2.9.0`); check its peer range before upgrading wagmi.

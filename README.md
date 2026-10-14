@@ -1,136 +1,203 @@
 # Web3GPT
 
-Web3GPT is an AI-powered smart contract platform for chatting with onchain agents, deploying Solidity contracts, and running agent-driven workflows on EVM chains.
+[![CI](https://github.com/markeljan/web3gpt/actions/workflows/ci.yml/badge.svg)](https://github.com/markeljan/web3gpt/actions/workflows/ci.yml)
 
-The current public integration surface is agent-first:
+**AI agents that write, compile, deploy and verify smart contracts.**
 
-- browser chat UI at [w3gpt.ai](https://w3gpt.ai)
-- skill endpoint at `https://w3gpt.ai/api/skill`
-- public aggregate stats at `https://w3gpt.ai/api/stats`
-- skill guide at `https://w3gpt.ai/skill.md`
-- API reference at `https://w3gpt.ai/api-docs`
+Describe a contract in plain language and a Web3GPT agent writes the Solidity, compiles it with
+the right `solc` version, deploys it to an EVM chain, pins the sources to IPFS and queues
+verification on the block explorer. You can use it in the browser, or call it from your own
+agent through a public HTTP skill API.
 
-## What Changed
+- **App:** [w3gpt.ai](https://w3gpt.ai)
+- **Skill guide (for AI agents):** [w3gpt.ai/skill.md](https://w3gpt.ai/skill.md)
+- **API reference:** [w3gpt.ai/api-docs](https://w3gpt.ai/api-docs)
+- **Live deployments:** [w3gpt.ai/contracts](https://w3gpt.ai/contracts) · [w3gpt.ai/api/stats](https://w3gpt.ai/api/stats)
 
-- the old Unkey-backed `/api/v1` endpoints are removed
-- the SDK now targets the skill/chat flow instead of separate completions/deploy APIs
-- Polygon mainnet deployment is available through the agent and skill endpoint
-- server-side deployments are returned and recorded only after a successful contract-creation receipt
-- Polygon mainnet is not exposed through wallet connectors in the UI
+## What it does
 
-## Core Flows
+- **Chat to deploy.** Ask for an ERC-20, an NFT collection, a vesting contract or anything else.
+  The agent writes it, using OpenZeppelin and other npm or GitHub imports when useful, and
+  deploys it. Every deployment returns the contract address, transaction hash and explorer
+  links, and is only reported after a successful contract-creation receipt.
+- **Two ways to pay gas.** Agent deployments are signed by Web3GPT's own wallet, so no wallet is
+  needed. "Deploy with wallet" compiles on the server and lets you sign the transaction with
+  your own wallet via RainbowKit.
+- **Any Solidity version.** The compiler is picked from the contract's `pragma` (0.4.11 and
+  later). Downloaded compilers are checksum-verified.
+- **Verified and reproducible.** Sources, ABI, bytecode and the standard JSON input are pinned to
+  IPFS. A background job verifies each contract on Blockscout or Etherscan.
+- **Custom agents.** Anyone signed in can create an agent with its own instructions and share
+  it by link (`w3gpt.ai/?a=<agentId>`).
+- **Agent-to-agent API.** `POST /api/skill` lets other agents and scripts hold a conversation
+  with a Web3GPT agent, including deployments, with no account.
+- **Saved and shared chats.** Signed-in users (GitHub) keep their chat history, including
+  deployment results, and can publish a chat as a public link.
 
-- chat with built-in or user-created Web3GPT agents
-- deploy contracts through the agent conversation
-- persist authenticated browser chats in Vercel KV
-- persist anonymous skill chats by `chatId`
-- verify deployments through the Vercel cron job
+## Supported chains
 
-## Supported Agent Deployment Chains
+| Chain | Chain ID | Agent deploys | Wallet deploys |
+| --- | --- | --- | --- |
+| Polygon | 137 | ✅ (metered, see [Limits](#limits)) | — |
+| Polygon Amoy | 80002 | ✅ | ✅ |
+| Ethereum Sepolia | 11155111 | ✅ | ✅ |
+| Base Sepolia | 84532 | ✅ | ✅ |
+| Arbitrum Sepolia | 421614 | ✅ | ✅ |
+| OP Sepolia | 11155420 | ✅ | ✅ |
+| Mantle Sepolia | 5003 | ✅ | ✅ |
+| Metis Sepolia | 59902 | ✅ | ✅ |
+| Celo Sepolia | 11142220 | ✅ | ✅ |
 
-- Polygon Mainnet
-- Polygon Amoy
-- Base Sepolia
-- Arbitrum Sepolia
-- Optimism Sepolia
-- Mantle Sepolia
-- Metis Sepolia
-- Celo Alfajores
-- Ethereum Sepolia
+Polygon mainnet is intentionally available to agents only, not to wallet connectors. Retired testnets
+(e.g. Celo Alfajores) can no longer be deployed to, but their past deployments still appear on the
+dashboard.
 
-## Getting Started
+## Using the skill API
 
-1. Clone the repository.
-2. Copy `.env.example` and fill in the required variables.
-3. Install dependencies.
-4. Run the app.
-
-```bash
-bun install
-bun dev
-```
-
-## Local Sign-In
-
-Create a [GitHub OAuth app](https://github.com/settings/developers) with the callback URL
-`http://localhost:3000/api/auth/callback/github`, then set `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`
-and `AUTH_SECRET` in `.env.local`. Sign-in works locally with no further configuration.
-
-## Important Environment Variables
-
-- `OPENAI_API_KEY`
-- `DEPLOYER_PRIVATE_KEY`
-- `AUTH_GITHUB_ID`
-- `AUTH_GITHUB_SECRET`
-- `AUTH_SECRET`
-- `CRON_SECRET`
-- `KV_REST_API_URL`
-- `KV_REST_API_TOKEN`
-- `NEXT_PUBLIC_ALCHEMY_API_KEY`
-- optional `NEXT_PUBLIC_POLYGON_AMOY_RPC_URL` wallet-client override
-- optional `POLYGON_AMOY_RPC_URL` and `POLYGON_MAINNET_RPC_URL` server deployment overrides
-- `NEXT_PUBLIC_TENDERLY_API_KEY`
-- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
-- `ETHERSCAN_API_KEY`
-- `BLOCKSCOUT_API_KEY`
-- `INFURA_API_KEY` for ENS/Unstoppable Domains resolution (server-only; `NEXT_PUBLIC_INFURA_API_KEY` is still read as a fallback)
-- `PINATA_JWT`
-- `NEXT_PUBLIC_IPFS_GATEWAY` (including the protocol, e.g. `https://ipfs.example.com`)
-
-## Skill API
-
-Start a chat:
+Start a conversation. A new `chatId` is returned, and it is the secret for continuing that
+conversation:
 
 ```bash
 curl https://w3gpt.ai/api/skill
 ```
 
-Continue a chat:
+Send messages with that `chatId`:
 
 ```bash
-curl -X POST "https://w3gpt.ai/api/skill?chatId=your-chat-id" \
+curl -X POST "https://w3gpt.ai/api/skill?chatId=<chatId>" \
   -H "Content-Type: application/json" \
-  -d '{"message":"Deploy an ERC20 on Polygon mainnet"}'
+  -d '{"message":"Deploy an ERC20 called Demo (DEMO) with 1,000,000 supply on Polygon Amoy"}'
 ```
 
-Include full history:
+```json
+{ "agentId": "agent_web3gpt", "chatId": "<chatId>", "response": "Deployed Demo at 0x… (tx 0x…) …" }
+```
+
+Add `history=true` to get the whole conversation back. The agent may ask you to confirm before
+it deploys; reply in the same chat. The full guide, written for AI agents, is
+[`skill.md`](https://w3gpt.ai/skill.md). The OpenAPI schema is at
+[`/api-docs`](https://w3gpt.ai/api-docs).
+
+### Limits
+
+The public endpoints are metered so the shared deployer wallet and model budget can't be
+drained:
+
+- **Agent messages:** 20 per IP and 30 per chat, every 10 minutes. Signed-in browser users get 60
+  per 10 minutes.
+- **Deployments paid by Web3GPT:** 10 testnet deployments per caller per hour. On Polygon
+  mainnet, 2 per caller per day, within a shared daily budget.
+- **Over a limit:** you get HTTP `429` with a `Retry-After` header. "Deploy with wallet" has no
+  gas limits, because you pay your own gas.
+
+## Self-hosting
+
+### Requirements
+
+- [Bun](https://bun.sh) 1.4+
+- An OpenAI API key
+- A Redis store with a REST API ([Upstash](https://upstash.com), e.g. through the Vercel
+  marketplace integration)
+- A funded EVM private key for agent deployments (testnet funds are enough to start)
+- A [Pinata](https://pinata.cloud) account for IPFS pinning
+- A GitHub OAuth app for sign-in
+
+### Setup
 
 ```bash
-curl "https://w3gpt.ai/api/skill?chatId=your-chat-id&history=true"
+git clone https://github.com/markeljan/web3gpt.git
+cd web3gpt
+bun install
+cp .env.example .env.local   # then fill it in, see below
+bun dev
 ```
 
-The `chatId` is the secret for continuing a thread outside the browser UI.
+For local sign-in, create a [GitHub OAuth app](https://github.com/settings/developers) with the
+callback URL `http://localhost:3000/api/auth/callback/github`. Then set `AUTH_GITHUB_ID`,
+`AUTH_GITHUB_SECRET` and `AUTH_SECRET` (any long random string). Nothing else is needed: the
+production callback proxy only applies to this project's own OAuth app.
 
-Successful deployment tool results include `chainId`, `contractAddress`, `transactionHash`,
-`explorerUrl`, and `transactionExplorerUrl`. Polygon mainnet uses chain ID `137`; Polygon
-Amoy uses chain ID `80002`.
+### Environment variables
 
-## Public Analytics
+Required:
 
-- all recorded deployments: [w3gpt.ai/contracts](https://w3gpt.ai/contracts)
-- Polygon mainnet filter: [w3gpt.ai/contracts?chain=polygon](https://w3gpt.ai/contracts?chain=polygon)
-- Polygon Amoy filter: [w3gpt.ai/contracts?chain=amoy](https://w3gpt.ai/contracts?chain=amoy)
-- machine-readable aggregate: [w3gpt.ai/api/stats](https://w3gpt.ai/api/stats)
+| Variable | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Model provider (agents run on `gpt-6-luna` by default) |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Redis REST endpoint for chats, agents, deployments, rate limits. The legacy Vercel KV names `KV_REST_API_URL` / `KV_REST_API_TOKEN` also work. |
+| `DEPLOYER_PRIVATE_KEY` | Hex key (no `0x`) of the wallet that pays for agent deployments |
+| `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET` | GitHub sign-in (Better Auth) |
+| `PINATA_JWT` | IPFS uploads |
+| `NEXT_PUBLIC_IPFS_GATEWAY` | Public gateway used in links, with protocol (e.g. `https://ipfs.example.com`) |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | RainbowKit / WalletConnect ([Reown dashboard](https://dashboard.reown.com)) |
+| `CRON_SECRET` | Authenticates the Vercel cron that runs contract verification |
 
-The aggregate reports custom agent records and deduplicated deployment records by chain. It
-includes its definitions and observation time so the values can be cited without treating
-testnet activity as mainnet activity.
+Recommended:
 
-Representative public custom agents include:
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_ALCHEMY_API_KEY` | Reliable RPC for most chains (public RPCs are the fallback) |
+| `ETHERSCAN_API_KEY`, `BLOCKSCOUT_API_KEY` | Contract verification |
+| `INFURA_API_KEY` | ENS / Unstoppable Domains resolution tools |
+| `NEXT_PUBLIC_TENDERLY_API_KEY` | Tenderly RPC for chains that use it |
+| `POLYGON_MAINNET_RPC_URL`, `POLYGON_AMOY_RPC_URL`, `NEXT_PUBLIC_POLYGON_AMOY_RPC_URL` | RPC overrides |
+| `AI_MODEL` | Run agents on a different OpenAI model, e.g. `gpt-6.1-sol` for stronger Solidity at higher cost |
 
-- [Dapp Creator](https://w3gpt.ai/?a=asst_K4OLY9h6g8Pwq9Vf9jgxr3ko)
-- [CTF Agent](https://w3gpt.ai/?a=asst_GfjkcVcwAXzkNE1JBXNfe89q)
-- [TokenScript GPT Agent](https://w3gpt.ai/?a=asst_Ava303baS9hyZeytRhuQG29v)
-- [Climate Tribe Map Location Saver](https://w3gpt.ai/?a=asst_jot3PNdg8gF638N1IjRIusl6)
+Optional limit overrides, with defaults in `lib/rate-limit.ts`:
+`MAINNET_DEPLOY_DAILY_LIMIT`, `MAINNET_DEPLOY_DAILY_LIMIT_PER_CALLER`,
+`TESTNET_DEPLOY_HOURLY_LIMIT_PER_CALLER`, `RATE_LIMIT_CHAT_ANON`, `RATE_LIMIT_CHAT_USER`,
+`RATE_LIMIT_SKILL`, `RATE_LIMIT_SKILL_CHAT`, `RATE_LIMIT_SKILL_READ`, `RATE_LIMIT_COMPILE`,
+`RATE_LIMIT_FINALIZE`.
 
-## Development Commands
+`.env.example` lists every variable.
 
-- `bun dev`
-- `bun run build`
-- `bun run start`
-- `bun run typecheck`
-- `bun run test`
-- `bun run lint`
-- `bun run format`
+### Deploying
 
-CI (`.github/workflows/ci.yml`) runs `bun run typecheck`, `bun run test`, and `bun run lint` on pull requests and pushes to `main`.
+The app is built for Vercel. `vercel.json` schedules `/api/cron` (contract verification) every
+minute and allows API routes up to 300s, which a deployment turn can need. Set the environment
+variables above in the Vercel project.
+
+## Development
+
+```bash
+bun dev              # dev server on :3000
+bun run typecheck    # TypeScript
+bun run test         # unit tests (bun test --isolate)
+bun run lint         # Ultracite/Biome; zero warnings
+bun run format       # auto-fix formatting and lint
+bun run build        # production build
+```
+
+CI runs typecheck, tests and lint on every pull request.
+
+### How it fits together
+
+```
+browser (Next.js app) ──► /api/chat  ─┐
+other agents ───────────► /api/skill ─┼─► agent (AI SDK + OpenAI) ─► tools: deployContract, resolveDomain, …
+                                      │                                  │
+                                      │        compile (solc by pragma) ─┤
+                                      │        deploy (viem, server key) ┤
+                                      │        pin sources (Pinata/IPFS) ┤
+                                      └─► Redis: chats, agents, deployments, rate limits
+Vercel cron ─► /api/cron ─► verify queued contracts on Blockscout / Etherscan
+```
+
+- `app/`: pages (`/`, `/chat/[id]`, `/share/[id]`, `/contracts`) and API routes
+- `components/`: chat UI, sidebar, wallet and deploy components, `ui/` primitives
+- `lib/`: agents and chains (`constants.ts`), AI tools (`tools.ts`), persistence
+  (`data/`), Solidity compile, deploy and verify (`solidity/`), rate limits
+- `test/`: unit tests
+
+[`AGENTS.md`](AGENTS.md) is the detailed guide to the codebase: architecture decisions, invariants
+and conventions. Read it before making changes, whether you're a person or a coding agent.
+
+## Security
+
+Please report vulnerabilities privately through
+[GitHub security advisories](https://github.com/markeljan/web3gpt/security/advisories/new), not
+public issues.
+
+## License
+
+[MIT](LICENSE)
