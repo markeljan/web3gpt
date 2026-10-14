@@ -129,8 +129,8 @@ Representative public custom agents include:
 - `bun run build`
 - `bun run start`
 - `bun run typecheck`
-- `bun test`
+- `bun run test`
 - `bun run lint`
 - `bun run format`
 
-CI (`.github/workflows/ci.yml`) runs `bun run typecheck`, `bun test`, and `bun run lint` on pull requests and pushes to `main`.
+CI (`.github/workflows/ci.yml`) runs `bun run typecheck`, `bun run test`, and `bun run lint` on pull requests and pushes to `main`.
