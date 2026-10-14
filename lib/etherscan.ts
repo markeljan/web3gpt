@@ -49,7 +49,6 @@ export const ETHERSCAN_V2_URLS: Record<number, { explorerUrl: string; apiUrl: st
   43113: { apiUrl: "https://api.etherscan.io/v2/api?chainid=43113", explorerUrl: "https://testnet.snowscan.xyz/" },
   43114: { apiUrl: "https://api.etherscan.io/v2/api?chainid=43114", explorerUrl: "https://snowscan.xyz/" },
   43521: { apiUrl: "https://api.etherscan.io/v2/api?chainid=43521", explorerUrl: "https://testnet.memecorescan.io/" },
-  44787: { apiUrl: "https://api.etherscan.io/v2/api?chainid=44787", explorerUrl: "https://alfajores.celoscan.io/" },
   50104: { apiUrl: "https://api.etherscan.io/v2/api?chainid=50104", explorerUrl: "https://sophscan.xyz/" },
   57054: { apiUrl: "https://api.etherscan.io/v2/api?chainid=57054", explorerUrl: "https://testnet.sonicscan.org/" },
   59141: { apiUrl: "https://api.etherscan.io/v2/api?chainid=59141", explorerUrl: "https://sepolia.lineascan.build/" },
@@ -69,6 +68,10 @@ export const ETHERSCAN_V2_URLS: Record<number, { explorerUrl: string; apiUrl: st
   534352: { apiUrl: "https://api.etherscan.io/v2/api?chainid=534352", explorerUrl: "https://scrollscan.com/" },
   560048: { apiUrl: "https://api.etherscan.io/v2/api?chainid=560048", explorerUrl: "https://hoodi.etherscan.io/" },
   660279: { apiUrl: "https://api.etherscan.io/v2/api?chainid=660279", explorerUrl: "https://xaiscan.io/" },
+  11142220: {
+    apiUrl: "https://api.etherscan.io/v2/api?chainid=11142220",
+    explorerUrl: "https://sepolia.celoscan.io/",
+  },
   11155111: {
     apiUrl: "https://api.etherscan.io/v2/api?chainid=11155111",
     explorerUrl: "https://sepolia.etherscan.io",

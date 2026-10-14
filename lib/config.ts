@@ -1,7 +1,7 @@
 import { DEPLOYMENT_URL, VERCEL_PROJECT_PRODUCTION_URL } from "vercel-url"
 import type { Chain } from "viem"
 import { BLOCKSCOUT_URLS } from "@/lib/blockscout"
-import { AGENT_DEPLOY_CHAINS, RPC_URLS } from "@/lib/constants"
+import { AGENT_DEPLOY_CHAINS, RETIRED_CHAINS, RPC_URLS } from "@/lib/constants"
 import { ETHERSCAN_V2_URLS } from "@/lib/etherscan"
 import type { ChainDetails, ChainWithIcon } from "@/lib/types"
 
@@ -41,6 +41,14 @@ export const getChainDetails = (viemChain: Chain): ChainDetails => {
 
 export function getChainById(chainId: number): ChainWithIcon | null {
   return AGENT_DEPLOY_CHAINS.find((chain) => chain.id === chainId) || null
+}
+
+/**
+ * Looks up a chain for displaying a stored deployment. Unlike getChainById, it
+ * also knows retired chains, which must never be offered as deploy targets.
+ */
+export function getDisplayChainById(chainId: number): ChainWithIcon | null {
+  return getChainById(chainId) || RETIRED_CHAINS.find((chain) => chain.id === chainId) || null
 }
 
 export const APP_URL = DEPLOYMENT_URL
