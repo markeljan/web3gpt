@@ -1,15 +1,19 @@
-import type { UIMessage } from "ai"
+import { consumeStream, createUIMessageStreamResponse, generateId, type UIMessage } from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 import { streamAgentReply } from "@/lib/agent-chat"
 import { getSession } from "@/lib/auth"
 import { canWriteChat } from "@/lib/chat-ownership"
-import { buildChatTitle, createTextMessage, getResponseText } from "@/lib/chat-utils"
+import { buildChatTitle } from "@/lib/chat-utils"
 import { getChatOwnerId, storeChat } from "@/lib/data/kv"
 import { getCallerId } from "@/lib/deploy-limits"
 import { getClientIp, hitRateLimit, LIMITS, rateLimitHeaders } from "@/lib/rate-limit"
 import type { DbChat } from "@/lib/types"
 
-export const maxDuration = 60
+// A deployment turn chains up to five model steps, a solc compile with remote
+// imports, a transaction, up to 45s waiting for its receipt, and an IPFS
+// upload. At 60s the function could be killed after the transaction was sent,
+// leaving a paid-for contract with no record. This matches vercel.json.
+export const maxDuration = 300
 
 /** Clients resend the whole conversation each turn; this bounds a single request. */
 const MAX_BODY_BYTES = 1_000_000
@@ -76,35 +80,48 @@ export async function POST(request: NextRequest) {
     agentId,
     callerId: getCallerId({ ip, userId }),
     messages,
-    onFinish: async ({ response }) => {
-      // Store chat after completion if user is logged in
-      if (userId && chatId) {
-        const assistantText = getResponseText({
-          responseMessages: response.messages,
-        })
-        const responseMessages: UIMessage[] = assistantText ? [createTextMessage("assistant", assistantText)] : []
-        const allMessages = [...messages, ...responseMessages]
-
-        const chat: DbChat = {
-          agentId,
-          avatarUrl,
-          // Only used when this is the chat's first write; `storeChat` keeps the
-          // original createdAt for chats that already exist.
-          createdAt: Date.now(),
-          id: chatId,
-          messages: allMessages,
-          published: false,
-          title: buildChatTitle(allMessages),
-          userId,
-        }
-
-        await storeChat({ data: chat, userId })
-      }
-    },
     userId,
   })
 
-  return result.toUIMessageStreamResponse({
+  const uiStream = result.toUIMessageStream({
+    generateMessageId: generateId,
+    // Persistence mode: `onFinish` receives the exact UIMessages the client
+    // rendered, including tool calls and results (the deployment card with its
+    // address, tx hash and explorer links) and reasoning. Collapsing the reply
+    // to plain text used to drop all of that from the stored chat.
+    onFinish: async ({ messages: finalMessages }) => {
+      if (!(userId && chatId)) {
+        return
+      }
+
+      const chat: DbChat = {
+        agentId,
+        avatarUrl,
+        // Only used when this is the chat's first write; `storeChat` keeps the
+        // original createdAt for chats that already exist.
+        createdAt: Date.now(),
+        id: chatId,
+        messages: finalMessages,
+        published: false,
+        title: buildChatTitle(finalMessages),
+        userId,
+      }
+
+      await storeChat({ data: chat, userId })
+    },
+    originalMessages: messages,
     sendReasoning: true,
   })
+
+  // One branch goes to the client; the server drains the other to the end. If
+  // the client disconnects mid-turn (a closed tab during a deployment), its
+  // branch is cancelled but the model, the tools and `onFinish` still run to
+  // completion, so a deployed contract is never missing from the stored chat.
+  const [clientStream, persistenceStream] = uiStream.tee()
+  consumeStream({
+    onError: (error) => console.error("chat persistence stream failed", error),
+    stream: persistenceStream,
+  })
+
+  return createUIMessageStreamResponse({ stream: clientStream })
 }

@@ -14,7 +14,8 @@ import { getCallerId } from "@/lib/deploy-limits"
 import { getClientIp, hitRateLimits, LIMITS, rateLimitHeaders } from "@/lib/rate-limit"
 import type { SkillChat } from "@/lib/types"
 
-export const maxDuration = 60
+// See app/api/chat/route.ts: a deployment turn can take well over a minute.
+export const maxDuration = 300
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
