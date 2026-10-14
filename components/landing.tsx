@@ -60,7 +60,7 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
         <div className="mx-auto grid w-full max-w-sm grid-cols-1 gap-3 sm:max-w-none sm:grid-cols-3">
           <div className="flex items-center gap-3">
             <Player
-              className="size-8 flex-shrink-0"
+              className="size-8 shrink-0"
               direction={-1}
               loop={false}
               path="/lotties/puzzle.json"
@@ -75,7 +75,7 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
 
           <div className="flex items-center gap-3">
             <Player
-              className="size-8 flex-shrink-0"
+              className="size-8 shrink-0"
               loop={false}
               path="/lotties/clock.json"
               play={!disableAnimations}
@@ -89,7 +89,7 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
 
           <div className="flex items-center gap-3">
             <Player
-              className="size-8 flex-shrink-0"
+              className="size-8 shrink-0"
               direction={1}
               loop={false}
               path="/lotties/globe.json"

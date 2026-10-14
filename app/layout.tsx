@@ -18,12 +18,12 @@ import { cn } from "@/lib/utils"
 
 const fontSans = FontSans({
   subsets: ["latin"],
-  variable: "--font-sans",
+  variable: "--font-inter",
 })
 
 const fontMono = FontMono({
   subsets: ["latin"],
-  variable: "--font-mono",
+  variable: "--font-jetbrains-mono",
 })
 
 const STRINGIFIED_MINIAPP = JSON.stringify({
@@ -111,8 +111,8 @@ export default async function Layout({ children }: { children: ReactNode }) {
   const cookiesValue = cookieStore.get("cookie")?.value
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={cn("font-sans antialiased", fontSans.variable, fontMono.variable)}>
+    <html className={cn(fontSans.variable, fontMono.variable)} lang="en" suppressHydrationWarning>
+      <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -336,11 +336,11 @@ function ChatMessageComponent({
 
             return (
               <ChainOfThoughtStep
-                className="gap-3 last:[&_[data-chain-line]]:hidden"
+                className="gap-3 **:data-chain-line:last:hidden"
                 key={`${message.id}-reasoning-step-${index}`}
                 label={
                   <MemoizedReactMarkdown
-                    className="prose prose-sm dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-pre:my-2 max-w-full break-words prose-pre:p-0"
+                    className="prose prose-sm dark:prose-invert wrap-break-word prose-headings:my-0 prose-p:my-0 prose-pre:my-2 max-w-full prose-pre:p-0"
                     components={components}
                     remarkPlugins={[remarkGfm, remarkMath]}
                   >
@@ -351,7 +351,7 @@ function ChatMessageComponent({
               >
                 {details ? (
                   <MemoizedReactMarkdown
-                    className="prose prose-sm dark:prose-invert prose-headings:my-0 prose-ol:my-2 prose-p:my-0 prose-pre:my-2 prose-ul:my-2 max-w-full break-words prose-pre:p-0 text-muted-foreground"
+                    className="prose prose-sm dark:prose-invert wrap-break-word prose-headings:my-0 prose-ol:my-2 prose-p:my-0 prose-pre:my-2 prose-ul:my-2 max-w-full prose-pre:p-0 text-muted-foreground"
                     components={components}
                     remarkPlugins={[remarkGfm, remarkMath]}
                   >
@@ -376,10 +376,10 @@ function ChatMessageComponent({
         content = (
           <MemoizedReactMarkdown
             className={cn(
-              "prose prose-pre:my-3 max-w-full break-words prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed",
+              "prose wrap-break-word prose-pre:my-3 max-w-full prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed",
               // The bubble sets its own foreground; force every prose descendant
               // to inherit it rather than using the (inverted) prose palette.
-              isUser ? "prose-p:my-0 text-inherit [&_*]:text-inherit" : "dark:prose-invert"
+              isUser ? "prose-p:my-0 text-inherit **:text-inherit" : "dark:prose-invert"
             )}
             components={components}
             remarkPlugins={[remarkGfm, remarkMath]}
