@@ -52,7 +52,7 @@ let sessionUserId: string | null = "1001"
 const stored: { messages: UIMessage[]; title: string }[] = []
 
 mock.module("server-only", () => ({}))
-mock.module("@vercel/kv", () => ({ kv: { expire: () => Promise.resolve(1), incr: () => Promise.resolve(1) } }))
+mock.module("@/lib/redis", () => ({ redis: { expire: () => Promise.resolve(1), incr: () => Promise.resolve(1) } }))
 mock.module("@ai-sdk/openai", () => ({ openai: () => model }))
 mock.module("@/lib/auth", () => ({
   getSession: () => Promise.resolve(sessionUserId ? { user: { id: sessionUserId, image: null } } : null),

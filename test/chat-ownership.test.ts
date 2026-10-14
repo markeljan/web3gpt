@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { canWriteChat, isChatOwner, normalizeOwnerId } from "@/lib/chat-ownership"
 
 // ---------------------------------------------------------------------------
-// In-memory stand-in for the subset of @vercel/kv these modules use. Values are
+// In-memory stand-in for the subset of the Redis client (@/lib/redis) these modules use. Values are
 // stored as given, and numeric strings come back as numbers, mirroring the
 // automatic deserialization that makes GitHub ids read back as numbers.
 // ---------------------------------------------------------------------------
@@ -80,7 +80,7 @@ const fakeKv = {
 let sessionUserId: string | null = null
 
 mock.module("server-only", () => ({}))
-mock.module("@vercel/kv", () => ({ kv: fakeKv }))
+mock.module("@/lib/redis", () => ({ redis: fakeKv }))
 mock.module("next/cache", () => ({ updateTag: () => undefined }))
 mock.module("@/lib/auth", () => ({
   getSession: () => Promise.resolve(sessionUserId ? { user: { id: sessionUserId } } : null),

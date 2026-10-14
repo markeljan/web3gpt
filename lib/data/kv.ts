@@ -1,7 +1,7 @@
 import "server-only"
-import { kv } from "@vercel/kv"
 import { getSession } from "@/lib/auth"
 import { isChatOwner } from "@/lib/chat-ownership"
+import { redis } from "@/lib/redis"
 import type {
   Agent,
   DbChat,
@@ -32,9 +32,9 @@ export async function storeUser(user: { id: string } & Record<string, unknown>) 
   // KV rejects undefined values, and the auth profile has optional fields.
   const details = Object.fromEntries(Object.entries(user).filter(([, value]) => value !== undefined))
 
-  await kv.hmset(userKey, details)
+  await redis.hmset(userKey, details)
 
-  await kv.sadd("users:list", user.id)
+  await redis.sadd("users:list", user.id)
 }
 
 // Read live rather than through `unstable_cache`.
@@ -56,12 +56,12 @@ export async function getChatList(userId?: string): Promise<DbChatListItem[]> {
     return []
   }
 
-  const chats: string[] = await kv.zrange(`user:chat:${resolvedUserId}`, 0, -1, { rev: true })
+  const chats: string[] = await redis.zrange(`user:chat:${resolvedUserId}`, 0, -1, { rev: true })
   if (!chats.length) {
     return []
   }
 
-  const pipeline = kv.pipeline()
+  const pipeline = redis.pipeline()
   for (const chat of chats) {
     pipeline.hmget<DbChatListItem>(chat, "id", "title", "published", "createdAt", "avatarUrl", "userId")
   }
@@ -71,13 +71,13 @@ export async function getChatList(userId?: string): Promise<DbChatListItem[]> {
 
 /** The stored owner of a chat, normalized to a string, or null if the chat does not exist. */
 export const getChatOwnerId = async (id: string): Promise<string | null> => {
-  const owner = await kv.hget<string | number>(`chat:${id}`, "userId")
+  const owner = await redis.hget<string | number>(`chat:${id}`, "userId")
   return owner === null || owner === undefined ? null : String(owner)
 }
 
 /** A chat owned by the signed-in user. Any other user's chat reads as missing. */
 export const getChat = withUser<string, DbChat | null>(async (id, userId) => {
-  const chat = await kv.hgetall<DbChat>(`chat:${id}`)
+  const chat = await redis.hgetall<DbChat>(`chat:${id}`)
   if (!(chat && isChatOwner(chat.userId, userId))) {
     return null
   }
@@ -89,7 +89,7 @@ export const getChat = withUser<string, DbChat | null>(async (id, userId) => {
  * field, the title included: it is the opening of the first prompt.
  */
 export async function getPublishedChat(id: string): Promise<DbChat | null> {
-  const chat = await kv.hgetall<DbChat>(`chat:${id}`)
+  const chat = await redis.hgetall<DbChat>(`chat:${id}`)
   if (!chat?.published) {
     return null
   }
@@ -97,22 +97,22 @@ export async function getPublishedChat(id: string): Promise<DbChat | null> {
 }
 
 export const getSkillChat = async (id: string): Promise<SkillChat | null> =>
-  await kv.hgetall<SkillChat>(`skill-chat:${id}`)
+  await redis.hgetall<SkillChat>(`skill-chat:${id}`)
 
 export async function storeSkillChat(chat: SkillChat) {
-  await kv.hmset(`skill-chat:${chat.id}`, chat)
+  await redis.hmset(`skill-chat:${chat.id}`, chat)
 }
 
-export const getAgent = async (id: string): Promise<Agent | null> => await kv.hgetall<Agent>(`agent:${id}`)
+export const getAgent = async (id: string): Promise<Agent | null> => await redis.hgetall<Agent>(`agent:${id}`)
 
 export const getAllAgents = async (): Promise<Agent[]> => {
-  const agentIds = await kv.smembers<string[]>("agents:list")
+  const agentIds = await redis.smembers<string[]>("agents:list")
 
   if (!agentIds || agentIds.length === 0) {
     return []
   }
 
-  const pipeline = kv.pipeline()
+  const pipeline = redis.pipeline()
   for (const agentId of agentIds) {
     pipeline.hgetall<Agent>(`agent:${agentId}`)
   }
@@ -125,7 +125,7 @@ export const getAllAgents = async (): Promise<Agent[]> => {
  * Store agent directly without auth check (for internal use like tool execution)
  */
 export const storeAgentDirect = async (agent: Agent): Promise<void> => {
-  await Promise.all([kv.hmset(`agent:${agent.id}`, agent), kv.sadd("agents:list", agent.id)])
+  await Promise.all([redis.hmset(`agent:${agent.id}`, agent), redis.sadd("agents:list", agent.id)])
 }
 
 // verifications
@@ -157,7 +157,7 @@ export const getVerifications = async (): Promise<VerificationScanResult> => {
   do {
     // Use SCAN instead of KEYS to avoid blocking
     // biome-ignore lint/performance/noAwaitInLoops: each SCAN call needs the previous cursor
-    const [nextCursor, keys] = await kv.scan(cursor, {
+    const [nextCursor, keys] = await redis.scan(cursor, {
       count: BATCH_SIZE,
       match: `${VERIFICATION_KEY_PREFIX}*`,
     })
@@ -166,7 +166,7 @@ export const getVerifications = async (): Promise<VerificationScanResult> => {
 
     if (keys && keys.length > 0) {
       // Process in batches to avoid "too many keys" error
-      const pipeline = kv.pipeline()
+      const pipeline = redis.pipeline()
       for (const key of keys) {
         pipeline.hgetall(key)
       }
@@ -189,7 +189,7 @@ export const retireVerification = async (id: string, lastVerificationError: stri
   const key = `${VERIFICATION_KEY_PREFIX}${id}`
   const terminalKey = `${VERIFICATION_TERMINAL_KEY_PREFIX}${id}`
 
-  await kv
+  await redis
     .multi()
     .hset(key, { failedAt: Date.now(), lastVerificationError, verificationStatus: "failed" })
     .rename(key, terminalKey)
@@ -198,11 +198,11 @@ export const retireVerification = async (id: string, lastVerificationError: stri
 }
 
 export const deleteVerification = async (deployHash: string) => {
-  await kv.del(`verification:${deployHash}`)
+  await redis.del(`verification:${deployHash}`)
 }
 
 export const storeVerification = async (data: VerifyContractParams) => {
-  await kv.hmset(`verification:${data.deployHash}`, {
+  await redis.hmset(`verification:${data.deployHash}`, {
     ...data,
     lastVerificationError: data.lastVerificationError || "",
     queuedAt: data.queuedAt || Date.now(),
@@ -213,13 +213,13 @@ export const storeVerification = async (data: VerifyContractParams) => {
 }
 
 export const updateVerification = async (deployHash: string, data: Partial<VerifyContractParams>) => {
-  await kv.hmset(`verification:${deployHash}`, data)
+  await redis.hmset(`verification:${deployHash}`, data)
 }
 
 export const storeDeployment = async (data: DeploymentRecord, userId = "anon") => {
   await Promise.all([
-    kv.hmset(`deployment:${data.cid}`, data),
-    kv.zadd(`user:deployments:${userId}`, {
+    redis.hmset(`deployment:${data.cid}`, data),
+    redis.zadd(`user:deployments:${userId}`, {
       member: `deployment:${data.cid}`,
       score: Date.now(),
     }),
@@ -227,16 +227,16 @@ export const storeDeployment = async (data: DeploymentRecord, userId = "anon") =
 }
 
 export const storeWalletDeployArtifact = async (artifactId: string, artifact: WalletDeployArtifact) => {
-  await kv.set(`wallet-deploy:${artifactId}`, artifact, {
+  await redis.set(`wallet-deploy:${artifactId}`, artifact, {
     ex: WALLET_DEPLOY_ARTIFACT_TTL_SECONDS,
   })
 }
 
 export const getWalletDeployArtifact = async (artifactId: string) =>
-  await kv.get<WalletDeployArtifact>(`wallet-deploy:${artifactId}`)
+  await redis.get<WalletDeployArtifact>(`wallet-deploy:${artifactId}`)
 
 export const deleteWalletDeployArtifact = async (artifactId: string) => {
-  await kv.del(`wallet-deploy:${artifactId}`)
+  await redis.del(`wallet-deploy:${artifactId}`)
 }
 
 const WALLET_DEPLOY_CLAIM_TTL_SECONDS = 120
@@ -247,17 +247,17 @@ const WALLET_DEPLOY_CLAIM_TTL_SECONDS = 120
  * Returns false if another request holds the lock.
  */
 export const claimWalletDeployArtifact = async (artifactId: string): Promise<boolean> =>
-  (await kv.set(`wallet-deploy-claim:${artifactId}`, 1, { ex: WALLET_DEPLOY_CLAIM_TTL_SECONDS, nx: true })) === "OK"
+  (await redis.set(`wallet-deploy-claim:${artifactId}`, 1, { ex: WALLET_DEPLOY_CLAIM_TTL_SECONDS, nx: true })) === "OK"
 
 export const releaseWalletDeployArtifactClaim = async (artifactId: string) => {
-  await kv.del(`wallet-deploy-claim:${artifactId}`)
+  await redis.del(`wallet-deploy-claim:${artifactId}`)
 }
 
 export const storeAgent = withUser<Agent, void>(async (agent, userId) => {
   if (userId !== agent.userId) {
     return
   }
-  await Promise.all([kv.hmset(`agent:${agent.id}`, agent), kv.sadd("agents:list", agent.id)])
+  await Promise.all([redis.hmset(`agent:${agent.id}`, agent), redis.sadd("agents:list", agent.id)])
 })
 
 /**
@@ -278,7 +278,7 @@ export const storeChat = withUser<
   }
 
   // Claim the id atomically if it is new; otherwise it must already be ours.
-  const claimed = await kv.hsetnx(`chat:${data.id}`, "userId", userId)
+  const claimed = await redis.hsetnx(`chat:${data.id}`, "userId", userId)
   if (!claimed && (await getChatOwnerId(data.id)) !== userId) {
     return false
   }
@@ -286,7 +286,7 @@ export const storeChat = withUser<
   // Callers rebuild the whole record on every assistant turn and stamp a fresh
   // createdAt, so the value already in KV is the only surviving record of when
   // the chat actually started. Keep the first one and track activity separately.
-  const storedCreatedAt = await kv.hget<number>(`chat:${data.id}`, "createdAt")
+  const storedCreatedAt = await redis.hget<number>(`chat:${data.id}`, "createdAt")
   const updatedAt = Date.now()
 
   const payload: DbChat = {
@@ -297,9 +297,9 @@ export const storeChat = withUser<
   }
 
   await Promise.all([
-    kv.hmset(`chat:${data.id}`, payload),
+    redis.hmset(`chat:${data.id}`, payload),
     // The sidebar reads this index newest-first, so it stays scored by activity.
-    kv.zadd(`user:chat:${userId}`, {
+    redis.zadd(`user:chat:${userId}`, {
       member: `chat:${data.id}`,
       score: updatedAt,
     }),
@@ -309,13 +309,13 @@ export const storeChat = withUser<
 })
 
 export const getUserDeployments = withUser<void, DeploymentRecord[]>(async (_, userId) => {
-  const deploymentKeys = await kv.zrange<string[]>(`user:deployments:${userId}`, 0, -1, { rev: true })
+  const deploymentKeys = await redis.zrange<string[]>(`user:deployments:${userId}`, 0, -1, { rev: true })
 
   if (!deploymentKeys.length) {
     return []
   }
 
-  const pipeline = kv.pipeline()
+  const pipeline = redis.pipeline()
   for (const deploymentKey of deploymentKeys) {
     const fullKey = deploymentKey.startsWith("deployment:") ? deploymentKey : `deployment:${deploymentKey}`
     pipeline.hgetall<DeploymentRecord>(fullKey)
@@ -334,7 +334,7 @@ export const getAllDeployments = async () => {
   // Use SCAN instead of KEYS to avoid blocking
   do {
     // biome-ignore lint/performance/noAwaitInLoops: each SCAN call needs the previous cursor
-    const [nextCursor, keys] = await kv.scan(cursor, {
+    const [nextCursor, keys] = await redis.scan(cursor, {
       count: BATCH_SIZE,
       match: "deployment:*",
     })
@@ -342,7 +342,7 @@ export const getAllDeployments = async () => {
     cursor = Number.parseInt(nextCursor, 10)
 
     if (keys && keys.length > 0) {
-      const pipeline = kv.pipeline()
+      const pipeline = redis.pipeline()
       for (const key of keys) {
         pipeline.hgetall<DeploymentRecord>(key)
       }

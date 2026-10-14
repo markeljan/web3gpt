@@ -2,9 +2,9 @@
  * Ownership rules for stored chats.
  *
  * Every chat hash carries the GitHub numeric id of its owner in `userId`.
- * `@vercel/kv` deserializes hash values, so a purely numeric id written as a
- * string comes back as a number. Both sides are normalized to strings before
- * comparing.
+ * The Redis client (`@/lib/redis`) deserializes hash values, so a purely
+ * numeric id written as a string comes back as a number. Both sides are
+ * normalized to strings before comparing.
  */
 export const normalizeOwnerId = (value: unknown): string | null => {
   if (typeof value === "string" && value.length > 0) {
