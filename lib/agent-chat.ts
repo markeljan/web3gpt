@@ -1,5 +1,5 @@
 import { type OpenAIResponsesProviderOptions, openai } from "@ai-sdk/openai"
-import { convertToModelMessages, generateText, stepCountIs, streamText, type UIMessage } from "ai"
+import { convertToModelMessages, generateText, isStepCount, streamText, type UIMessage } from "ai"
 import { AGENT_DEPLOY_CHAINS, DEFAULT_AGENT, DEFAULT_COMPILER_VERSION, DEFAULT_TOOL_NAMES } from "@/lib/constants"
 import { getAgentById } from "@/lib/data/agents"
 import { getTools } from "@/lib/tools"
@@ -26,8 +26,18 @@ const providerOptions = {
  */
 export const MAX_MODEL_MESSAGES = 40
 
-export const toModelWindow = (messages: UIMessage[]): UIMessage[] =>
-  messages.length > MAX_MODEL_MESSAGES ? messages.slice(-MAX_MODEL_MESSAGES) : messages
+/**
+ * The model's view of the conversation: the latest `MAX_MODEL_MESSAGES`
+ * messages, without system messages. The system prompt is built on the server
+ * from the agent, but history comes from the client, and the stored-chat types
+ * still admit legacy `system` messages. AI SDK 7 rejects a system message in
+ * `messages` (the whole turn fails), and letting one through would let a client
+ * rewrite the agent's instructions.
+ */
+export const toModelWindow = (messages: UIMessage[]): UIMessage[] => {
+  const conversation = messages.filter((message) => message.role !== "system")
+  return conversation.length > MAX_MODEL_MESSAGES ? conversation.slice(-MAX_MODEL_MESSAGES) : conversation
+}
 
 const availableChainsText = AGENT_DEPLOY_CHAINS.map((chain) => `${chain.name} (chainId: ${chain.id})`).join(", ")
 
@@ -54,28 +64,28 @@ export const generateAgentReply = async ({ agentId, messages, userId, callerId }
   const { agent, tools, systemPrompt } = await getAgentRuntime({ agentId, callerId, userId })
 
   const result = await generateText({
+    instructions: systemPrompt,
     messages: await convertToModelMessages(toModelWindow(messages)),
     model: openai("gpt-5.4-nano"),
     providerOptions,
-    stopWhen: stepCountIs(5),
-    system: systemPrompt,
+    stopWhen: isStepCount(5),
     tools,
   })
 
-  return { agent, result }
+  return { agent, result, tools }
 }
 
 export const streamAgentReply = async ({ agentId, messages, userId, callerId }: AgentChatParams) => {
   const { agent, tools, systemPrompt } = await getAgentRuntime({ agentId, callerId, userId })
 
   const result = streamText({
+    instructions: systemPrompt,
     messages: await convertToModelMessages(toModelWindow(messages)),
     model: openai("gpt-5.4-nano"),
     providerOptions,
-    stopWhen: stepCountIs(5),
-    system: systemPrompt,
+    stopWhen: isStepCount(5),
     tools,
   })
 
-  return { agent, result }
+  return { agent, result, tools }
 }

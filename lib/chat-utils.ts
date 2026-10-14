@@ -1,5 +1,5 @@
 import { generateId, type UIMessage } from "ai"
-import type { SkillChatHistoryItem } from "@/lib/types"
+import type { LegacyMessage, SkillChatHistoryItem } from "@/lib/types"
 
 const MAX_TITLE_LENGTH = 50
 
@@ -72,6 +72,20 @@ export const createTextMessage = (role: "user" | "assistant", text: string): UIM
   parts: [{ text, type: "text" }],
   role,
 })
+
+/**
+ * Stored chats as `useChat` expects them. Messages written by AI SDK 5, 6 and 7
+ * share one `parts` shape (7 only adds optional fields and part types), so they
+ * pass through untouched; legacy AI SDK 4 records carry a `content` string.
+ */
+export const toUIMessages = (messages: (UIMessage | LegacyMessage)[]): UIMessage[] =>
+  messages.map((message) => {
+    if ("parts" in message && Array.isArray(message.parts)) {
+      return message as UIMessage
+    }
+    const text = "content" in message && typeof message.content === "string" ? message.content : ""
+    return { id: message.id, parts: [{ text, type: "text" }], role: message.role }
+  })
 
 export const buildChatTitle = (messages: UIMessage[], fallback = "New Chat"): string => {
   const firstUserMessage = messages.find((message) => message.role === "user")

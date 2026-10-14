@@ -146,10 +146,13 @@ async function handleSkillRequest(request: NextRequest) {
       messages,
     })
 
+    // AI SDK 7: `responseMessages` accumulates every step (what
+    // `response.messages` meant in v6; it is now the final step's only), and the
+    // top-level `toolResults` now spans every step, so read the final step's.
     const assistantText = getResponseText({
-      responseMessages: result.response.messages,
+      responseMessages: result.responseMessages,
       text: result.text,
-      toolResults: result.toolResults,
+      toolResults: result.finalStep.toolResults,
     })
     const nextMessages = assistantText ? [...messages, createTextMessage("assistant", assistantText)] : messages
 

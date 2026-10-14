@@ -52,9 +52,9 @@ export const Chat = ({ initialChatId, initialMessages = [], agent, className, us
   const currentChatId = useMemo(() => chatId || generateId(), [chatId, newChatNonce])
 
   const { messages, status, stop, sendMessage, setMessages, regenerate, error, id } = useChat({
-    experimental_throttle: CHAT_STREAM_THROTTLE_MS,
     id: currentChatId,
     messages: seedMessages,
+    throttle: CHAT_STREAM_THROTTLE_MS,
     transport: new DefaultChatTransport({
       api: "/api/chat",
       body: {

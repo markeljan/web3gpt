@@ -1,7 +1,7 @@
-import type { UIMessage } from "ai"
 import { notFound, redirect } from "next/navigation"
 import { Chat } from "@/components/chat/chat"
 import { getSession } from "@/lib/auth"
+import { toUIMessages } from "@/lib/chat-utils"
 import { DEFAULT_AGENT } from "@/lib/constants"
 import { getAgentById } from "@/lib/data/agents"
 import { getChat } from "@/lib/data/kv"
@@ -35,27 +35,7 @@ export default async function ChatPage({ params, searchParams }: NextPageProps) 
 
   const agent = await getAgentById(agentId)
 
-  // Use messages stored in KV - convert LegacyMessage to UIMessage if needed
-  const messages = (chat.messages || []).map((msg) => {
-    // If it's already a UIMessage (has parts array), return as is
-    if ("parts" in msg && Array.isArray(msg.parts)) {
-      return msg as UIMessage
-    }
-    // If it's a LegacyMessage (has content), convert to UIMessage
-    if ("content" in msg && typeof msg.content === "string") {
-      return {
-        id: msg.id,
-        parts: [{ text: msg.content, type: "text" }],
-        role: msg.role,
-      } as UIMessage
-    }
-    // Fallback: create empty message
-    return {
-      id: msg.id,
-      parts: [{ text: "", type: "text" }],
-      role: msg.role,
-    } as UIMessage
-  })
+  const messages = toUIMessages(chat.messages || [])
 
   return (
     <Chat
