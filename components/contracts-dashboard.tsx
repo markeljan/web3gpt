@@ -221,7 +221,7 @@ export function ContractsDashboard({
   )
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-background to-muted">
+    <div className="min-h-full bg-linear-to-br from-background to-muted">
       <div className="container mx-auto max-w-7xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -317,7 +317,7 @@ export function ContractsDashboard({
                     <Button
                       className={cn(
                         "group h-10 justify-start px-3 font-medium text-xs transition-all",
-                        isActive && "shadow-sm"
+                        isActive && "shadow-xs"
                       )}
                       key={category.id}
                       onClick={() => setActiveCategory(category.id)}
@@ -326,7 +326,7 @@ export function ContractsDashboard({
                     >
                       <Icon
                         className={cn(
-                          "mr-2 h-3.5 w-3.5 flex-shrink-0 transition-transform",
+                          "mr-2 h-3.5 w-3.5 shrink-0 transition-transform",
                           isActive && "scale-110",
                           !isActive && "group-hover:scale-110"
                         )}
@@ -334,7 +334,7 @@ export function ContractsDashboard({
                       <span className="truncate">{category.label}</span>
                       {category.count !== null && (
                         <Badge
-                          className="ml-auto flex h-4 min-w-[1.25rem] items-center justify-center px-1 text-xs"
+                          className="ml-auto flex h-4 min-w-5 items-center justify-center px-1 text-xs"
                           variant={isActive ? "secondary" : "outline"}
                         >
                           {category.count}
@@ -381,7 +381,7 @@ export function ContractsDashboard({
                       <Button
                         className={cn(
                           "group h-9 justify-start px-3 font-medium text-xs transition-all",
-                          isSelected && "shadow-sm",
+                          isSelected && "shadow-xs",
                           isSelected && chainInfo.iconBackground,
                           !isSelected && "hover:border-primary/50"
                         )}
@@ -392,10 +392,7 @@ export function ContractsDashboard({
                       >
                         <Image
                           alt={chainInfo.name}
-                          className={cn(
-                            "mr-2 flex-shrink-0 transition-transform",
-                            !isSelected && "group-hover:scale-110"
-                          )}
+                          className={cn("mr-2 shrink-0 transition-transform", !isSelected && "group-hover:scale-110")}
                           height={16}
                           src={chainInfo.iconUrl}
                           width={16}
@@ -403,7 +400,7 @@ export function ContractsDashboard({
                         <span className="truncate">{chainInfo.name}</span>
                         {(filters.activeCategory === "my-contracts" || filters.activeCategory === "all-contracts") && (
                           <Badge
-                            className="ml-auto flex h-4 min-w-[1.25rem] items-center justify-center px-1 text-xs"
+                            className="ml-auto flex h-4 min-w-5 items-center justify-center px-1 text-xs"
                             variant={isSelected ? "secondary" : "outline"}
                           >
                             {deploymentCount}
@@ -529,7 +526,7 @@ export function ContractsDashboard({
                       )}
                       key={`card-${chain.id}`}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5" />
+                      <div className="absolute inset-0 bg-linear-to-br from-transparent via-transparent to-primary/5" />
                       <CardHeader className="relative pb-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
@@ -596,7 +593,7 @@ export function ContractsDashboard({
 
                     return (
                       <Card
-                        className="group border-0 bg-card shadow-sm transition-all duration-200 hover:shadow-lg"
+                        className="group border-0 bg-card shadow-xs transition-all duration-200 hover:shadow-lg"
                         key={generateUniqueKey(deployment, index)}
                       >
                         <CardHeader className="pb-3">
@@ -638,7 +635,7 @@ export function ContractsDashboard({
                                 target="_blank"
                               >
                                 <code className="flex-1 truncate font-mono text-xs">{deployment.contractAddress}</code>
-                                <ExternalLink className="h-3 w-3 flex-shrink-0 text-muted-foreground group-hover:text-primary" />
+                                <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
                               </Link>
                             ) : (
                               <code className="block truncate rounded-lg bg-muted/50 p-2 font-mono text-xs">
@@ -661,7 +658,7 @@ export function ContractsDashboard({
                                 target="_blank"
                               >
                                 <code className="flex-1 truncate font-mono text-xs">{deployment.deployHash}</code>
-                                <ExternalLink className="h-3 w-3 flex-shrink-0 text-muted-foreground group-hover:text-primary" />
+                                <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
                               </Link>
                             ) : (
                               <code className="block truncate rounded-lg bg-muted/50 p-2 font-mono text-xs">
@@ -677,7 +674,7 @@ export function ContractsDashboard({
                               <span>IPFS Source Code</span>
                             </div>
                             <Link
-                              className="group flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50 p-2 transition-colors hover:from-purple-100 hover:to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 dark:hover:from-purple-900/30 dark:hover:to-pink-900/30"
+                              className="group flex items-center gap-2 rounded-lg bg-linear-to-r from-purple-50 to-pink-50 p-2 transition-colors hover:from-purple-100 hover:to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 dark:hover:from-purple-900/30 dark:hover:to-pink-900/30"
                               href={getIpfsUrl(deployment.cid)}
                               rel="noopener noreferrer"
                               target="_blank"
@@ -685,7 +682,7 @@ export function ContractsDashboard({
                               <code className="flex-1 truncate font-mono text-purple-700 text-xs dark:text-purple-300">
                                 {deployment.cid}
                               </code>
-                              <ExternalLink className="h-3 w-3 flex-shrink-0 text-purple-500 group-hover:text-purple-600 dark:group-hover:text-purple-400" />
+                              <ExternalLink className="h-3 w-3 shrink-0 text-purple-500 group-hover:text-purple-600 dark:group-hover:text-purple-400" />
                             </Link>
                           </div>
                         </CardContent>

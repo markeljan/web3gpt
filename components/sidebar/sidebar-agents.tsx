@@ -18,7 +18,7 @@ export const SidebarAgents = () => (
             variant="link"
           >
             <Link className="flex w-full items-center space-x-2" href={`/?a=${assistant.id}`}>
-              <div className="relative h-5 w-5 flex-shrink-0">
+              <div className="relative h-5 w-5 shrink-0">
                 <Image
                   alt={`${assistant.name} image`}
                   className="rounded-full object-cover"

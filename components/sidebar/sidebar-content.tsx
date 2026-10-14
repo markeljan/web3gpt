@@ -16,7 +16,7 @@ export async function SidebarContent() {
   return (
     <div className="flex h-full flex-col">
       {/* Header Section */}
-      <div className="flex-shrink-0 p-6 pb-4">
+      <div className="shrink-0 p-6 pb-4">
         <W3GPTLogo className="mb-6" />
 
         {/* Navigation */}
@@ -25,10 +25,10 @@ export async function SidebarContent() {
         </div>
       </div>
 
-      <Separator className="flex-shrink-0" />
+      <Separator className="shrink-0" />
 
       {/* Agents Section */}
-      <div className="flex-shrink-0 p-6 py-2">
+      <div className="shrink-0 p-6 py-2">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="pointer-events-none select-none font-semibold text-muted-foreground text-xs uppercase tracking-wider">
             Agents
@@ -39,11 +39,11 @@ export async function SidebarContent() {
         </div>
       </div>
 
-      <Separator className="flex-shrink-0" />
+      <Separator className="shrink-0" />
 
       {/* Chat History Section - Scrollable */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-2">
-        <div className="mb-3 flex flex-shrink-0 items-center justify-between px-2">
+        <div className="mb-3 flex shrink-0 items-center justify-between px-2">
           <h3 className="pointer-events-none select-none font-semibold text-muted-foreground text-xs uppercase tracking-wider">
             Chats
           </h3>
@@ -60,10 +60,10 @@ export async function SidebarContent() {
         </div>
       </div>
 
-      <Separator className="flex-shrink-0" />
+      <Separator className="shrink-0" />
 
       {/* User Section - Bottom */}
-      <div className="flex-shrink-0 p-4">
+      <div className="shrink-0 p-4">
         {user ? (
           <div className="overflow-hidden rounded-lg border bg-muted/50">
             <UserMenu user={user} variant="sidebar" />

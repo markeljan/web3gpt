@@ -21,7 +21,7 @@ export function ChatPanel({ isLoading, isEmpty, error, onSubmit, onRetry, stop, 
       {/* Fades the last line of the transcript into the composer instead of cutting it off. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-gradient-to-t from-background to-transparent"
+        className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-linear-to-t from-background to-transparent"
       />
       <ButtonScrollToBottom />
       <div className="mx-auto w-full max-w-3xl px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

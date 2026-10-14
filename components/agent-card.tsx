@@ -23,7 +23,7 @@ export const AgentCard = ({ agent, className, children }: AgentCardProps) => {
         className
       )}
     >
-      <div className="relative mt-4 size-16 flex-shrink-0">
+      <div className="relative mt-4 size-16 shrink-0">
         <Image
           alt={`${agent.name} image`}
           className="rounded-lg object-contain"
@@ -50,7 +50,7 @@ export const AgentCard = ({ agent, className, children }: AgentCardProps) => {
         </div>
         <p className="mt-1 text-gray-500 text-xs">by {agent.creator}</p>
       </div>
-      <div className="flex flex-shrink-0 gap-1">
+      <div className="flex shrink-0 gap-1">
         {children}
         <CopyAgentUrlButton agentId={agent.id} />
       </div>

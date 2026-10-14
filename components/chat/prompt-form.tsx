@@ -93,7 +93,7 @@ export const PromptForm = ({ onSubmit, stop, onNewChat, isLoading, isEmpty }: Pr
   return (
     <div className="flex flex-col gap-2">
       {isGuildBannerOpen ? (
-        <div className="flex items-center gap-3 rounded-xl border bg-background/95 px-3 py-2 text-sm shadow-sm">
+        <div className="flex items-center gap-3 rounded-xl border bg-background/95 px-3 py-2 text-sm shadow-xs">
           <span className="min-w-0 flex-1 text-muted-foreground">
             Join the w3gpt Guild for special roles and upcoming rewards.
           </span>
@@ -142,7 +142,7 @@ export const PromptForm = ({ onSubmit, stop, onNewChat, isLoading, isEmpty }: Pr
             aria-label="Message Web3GPT"
             autoComplete="off"
             autoCorrect="off"
-            className="max-h-[240px] min-h-[36px] w-full flex-1 resize-none self-center bg-transparent py-2 text-base outline-none sm:text-sm"
+            className="max-h-[240px] min-h-[36px] w-full flex-1 resize-none self-center bg-transparent py-2 text-base outline-hidden sm:text-sm"
             maxRows={10}
             onChange={handleInputChange}
             onKeyDown={onKeyDown}
