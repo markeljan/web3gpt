@@ -37,13 +37,13 @@ Primary product flows:
 - Build: `bun run build`
 - Start production server: `bun run start`
 - Typecheck: `bun run typecheck`
-- Test: `bun test`
+- Test: `bun run test` (runs `bun test --isolate`)
 - Lint: `bun run lint`
 - Format: `bun run format`
 
 Git hooks are managed by `lefthook.yml`. Pre-commit runs `bunx ultracite fix` on JS/TS/JSON/CSS files.
 
-CI (`.github/workflows/ci.yml`) runs `bun install --frozen-lockfile`, `bun run typecheck`, `bun test`, and `bun run lint` on every pull request and on pushes to `main`. Lint warnings do not fail CI; errors do. CI does not run `next build` because it needs real environment variables.
+CI (`.github/workflows/ci.yml`) runs `bun install --frozen-lockfile`, `bun run typecheck`, `bun run test`, and `bun run lint` on every pull request and on pushes to `main`. Lint warnings do not fail CI; errors do. Every rule the Ultracite upgrade relaxed is back to `error`, and the codebase has zero warnings, so keep it that way. CI does not run `next build` because it needs real environment variables.
 
 ## Environment
 
@@ -128,7 +128,7 @@ Notes:
 - Avoid changing `components/ui/*` unless the shared primitive itself needs to change.
 - Keep client/server boundaries explicit. Files under `lib/data/*` and `lib/solidity/*` are server-oriented; interactive chat and wallet code live in client components/hooks.
 - When editing deployment logic, trace both the user-facing chat tool path and the public API route path.
-- Unit tests use `bun:test` and live in `test/*.test.ts` plus colocated `*.test.ts` files (e.g. `lib/solidity/deployment-tool-result.test.ts`); run them with `bun test`. Add or update tests for logic changes, and back them with targeted manual verification for flows that need real services (KV, OpenAI, RPC).
+- Unit tests use `bun:test` and live in `test/*.test.ts` plus colocated `*.test.ts` files (e.g. `lib/solidity/deployment-tool-result.test.ts`); run them with `bun run test`. It passes `--isolate` because tests use `mock.module`, which is process-wide in Bun: without isolation one file's mock of a module (e.g. `@/lib/data/kv`) leaks into other files depending on discovery order, which differs between machines. Add or update tests for logic changes, and back them with targeted manual verification for flows that need real services (KV, OpenAI, RPC).
 
 ## Safe Edit Checklist
 
@@ -143,7 +143,7 @@ Notes:
 Minimum validation after non-trivial code changes:
 
 - `bun run typecheck`
-- `bun test`
+- `bun run test`
 - `bun run lint`
 
 CI runs the same three checks on every pull request.

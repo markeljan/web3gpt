@@ -120,6 +120,7 @@ export async function resolveImports(
   const importPaths = new Set(findImports(sourceCode).map(({ path }) => path))
   const renamed = new Map<string, string>()
   for (const importPath of importPaths) {
+    // biome-ignore lint/performance/noAwaitInLoops: imports share one fetch budget and resolve in source order, which decides file-name collisions
     const { sources: importedSources, sourceCode: mainSourceCode } = await fetchImport(
       importPath,
       sourcePath,
@@ -175,6 +176,7 @@ async function fetchImport(
 
   for (const importCandidate of importCandidates) {
     const urlToFetch = getImportUrl(importCandidate, sourcePath)
+    // biome-ignore lint/performance/noAwaitInLoops: fallbacks are tried in order, stopping at the first that exists
     const response = await fetchRemoteSource(urlToFetch, budget)
 
     if (!response.ok) {
@@ -279,9 +281,9 @@ export async function prepareContractSources(
 
   const sources = {
     [fileName]: {
-      content: handleImportsResult?.sourceCode,
+      content: handleImportsResult.sourceCode,
     },
-    ...handleImportsResult?.sources,
+    ...handleImportsResult.sources,
   }
 
   // Every file is now stored under a flat name. Point any import that doesn't

@@ -68,7 +68,7 @@
       "suspicious": {
         "noConsole": "off",
         "noLeakedRender": "error",
-        "noUnnecessaryConditions": "warn",
+        "noUnnecessaryConditions": "error",
         "noShadow": "error"
       },
       "style": {
@@ -78,12 +78,12 @@
             "style": "type"
           }
         },
-        "useDestructuring": "warn",
+        "useDestructuring": "error",
         "noIncrementDecrement": "error"
       },
       "performance": {
         "noJsxPropsBind": "off",
-        "noAwaitInLoops": "warn",
+        "noAwaitInLoops": "error",
         "noImgElement": "warn"
       }
     }
