@@ -1,7 +1,7 @@
-import { ApiReference } from "@scalar/nextjs-api-reference"
+import { ApiReference, type ApiReferenceConfiguration } from "@scalar/nextjs-api-reference"
 import openApiSpec from "@/public/openapi.json" with { type: "json" }
 
-const config: Parameters<typeof ApiReference>[0] = {
+const config: Partial<ApiReferenceConfiguration> = {
   content: openApiSpec,
   hideClientButton: true,
   metaData: {
