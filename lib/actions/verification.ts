@@ -1,4 +1,7 @@
-"use server"
+import "server-only"
+// Plain server-only module, called only by lib/solidity/deploy.ts after an on-chain
+// receipt confirms the deployment. It must not be marked "use server": that can
+// turn these writes into public endpoints for forging deployment records.
 import { getSession } from "@/lib/auth"
 import { storeDeployment, storeVerification } from "@/lib/data/kv"
 import type { DeploymentRecord, VerifyContractParams } from "@/lib/types"

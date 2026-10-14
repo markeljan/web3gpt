@@ -107,6 +107,10 @@ Notes:
 - `app/api/chat/route.ts` builds a system prompt from the selected agent and attaches tools from `lib/tools.ts`.
 - `app/api/skill/route.ts` persists anonymous agent chats in KV by `chatId` and returns simplified responses/history for SDK and skill consumers.
 - Chat history is persisted only when a user is signed in and a `chatId` is present.
+- Abuse limits live in `lib/rate-limit.ts` (fixed-window counters on KV) and `lib/deploy-limits.ts`. `/api/chat`, `/api/skill` and `/api/wallet-deploy/*` are rate limited per IP or user. The `deployContract` tool is metered per caller (`user:<id>` or `ip:<addr>`) because the server wallet pays the gas. Mainnet (any chain viem doesn't flag as a testnet) also has a shared daily budget and fails closed if KV is unreachable. New public routes and new server-wallet tools must be metered the same way.
+- `lib/actions/*` modules that are only called from server code must not be marked `"use server"`: that can expose every export as a public action endpoint. Server actions that are exposed must read ownership from KV, never from their arguments.
+- Remote Solidity imports are fetched only from `unpkg.com`, `cdn.jsdelivr.net` and `raw.githubusercontent.com` (GitHub blob URLs are rewritten), over https, with a timeout and caps on size and count (`lib/solidity/utils.ts`).
+- `/api/wallet-deploy/finalize` re-reads the transaction and receipt from the chain and records only what the chain says, after checking that the creation input starts with the bytecode the server compiled.
 - Contract deployment flow compiles Solidity, deploys with a server-side private key, uploads artifacts to IPFS, stores verification metadata, and later verifies via cron.
 - `lib/data/ipfs.ts` uses the Pinata SDK v2 (`pinata.upload.public.*` builder chain, returns `cid`). Uploads go to the **public** network and the `W3GPT` group; the private network would need signed URLs and must not be used for contract artifacts.
 - `NEXT_PUBLIC_IPFS_GATEWAY` includes the protocol because `getIpfsUrl` builds public links from it; the SDK wants a bare domain, so the protocol is stripped when constructing the client.
