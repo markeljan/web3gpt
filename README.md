@@ -73,7 +73,9 @@ and `AUTH_SECRET` in `.env.local`. Sign-in works locally with no further configu
 - `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`
 - `ETHERSCAN_API_KEY`
 - `BLOCKSCOUT_API_KEY`
+- `INFURA_API_KEY` for ENS/Unstoppable Domains resolution (server-only; `NEXT_PUBLIC_INFURA_API_KEY` is still read as a fallback)
 - `PINATA_JWT`
+- `NEXT_PUBLIC_IPFS_GATEWAY` (including the protocol, e.g. `https://ipfs.example.com`)
 
 ## Skill API
 
@@ -127,5 +129,8 @@ Representative public custom agents include:
 - `bun run build`
 - `bun run start`
 - `bun run typecheck`
+- `bun test`
 - `bun run lint`
 - `bun run format`
+
+CI (`.github/workflows/ci.yml`) runs `bun run typecheck`, `bun test`, and `bun run lint` on pull requests and pushes to `main`.
