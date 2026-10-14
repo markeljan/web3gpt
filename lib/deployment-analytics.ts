@@ -1,4 +1,4 @@
-import { AGENT_DEPLOY_CHAINS } from "@/lib/constants"
+import { AGENT_DEPLOY_CHAINS, RETIRED_CHAINS } from "@/lib/constants"
 import type { DeploymentRecordBase } from "@/lib/types"
 
 type PublicDeploymentChainStats = {
@@ -72,8 +72,11 @@ export const buildPublicAnalytics = ({
     countsByChain.set(deployment.chainId, (countsByChain.get(deployment.chainId) ?? 0) + 1)
   }
 
-  const knownChainsById = new Map(AGENT_DEPLOY_CHAINS.map((chain) => [chain.id, chain]))
-  const knownChainOrder = new Map(AGENT_DEPLOY_CHAINS.map((chain, index) => [chain.id, index]))
+  // Retired chains still have records, so they are named, but they sort after
+  // every chain that can still be deployed to.
+  const knownChains = [...AGENT_DEPLOY_CHAINS, ...RETIRED_CHAINS]
+  const knownChainsById = new Map(knownChains.map((chain) => [chain.id, chain]))
+  const knownChainOrder = new Map(knownChains.map((chain, index) => [chain.id, index]))
   const chainIds = [...countsByChain.keys()].sort((first, second) => {
     const firstIndex = knownChainOrder.get(first)
     const secondIndex = knownChainOrder.get(second)
