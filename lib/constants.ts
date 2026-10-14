@@ -3,6 +3,7 @@ import {
   arbitrumSepolia,
   baseSepolia,
   celoAlfajores,
+  celoSepolia,
   mantleSepoliaTestnet,
   metisSepolia,
   optimismSepolia,
@@ -55,7 +56,7 @@ export const RPC_URLS: Record<number, string> = {
   [baseSepolia.id]: `https://base-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   [arbitrumSepolia.id]: `https://arb-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   [optimismSepolia.id]: `https://opt-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
-  [celoAlfajores.id]: `https://celo-alfajores.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
+  [celoSepolia.id]: `https://celo-sepolia.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY}`,
   [mantleSepoliaTestnet.id]: `https://mantle-sepolia.gateway.tenderly.co/${process.env.NEXT_PUBLIC_TENDERLY_API_KEY}`,
   [metisSepolia.id]: `https://metis-sepolia.gateway.tenderly.co/${process.env.NEXT_PUBLIC_TENDERLY_API_KEY}`,
 }
@@ -112,10 +113,11 @@ const optimismSepoliaWithIcon = {
   iconUrl: "/assets/chains/optimism-logo.png",
 }
 
-const celoAlfajoresWithIcon = {
-  ...celoAlfajores,
+const celoSepoliaWithIcon = {
+  ...celoSepolia,
   iconBackground: "#35D07F",
   iconUrl: "/assets/chains/celo-logo.png",
+  name: "Celo Sepolia",
 }
 
 const sepoliaWithIcon = {
@@ -131,11 +133,28 @@ export const SUPPORTED_CHAINS: [ChainWithIcon, ...ChainWithIcon[]] = [
   baseSepoliaWithIcon,
   arbitrumSepoliaWithIcon,
   optimismSepoliaWithIcon,
-  celoAlfajoresWithIcon,
+  celoSepoliaWithIcon,
   sepoliaWithIcon,
 ]
 
 export const AGENT_DEPLOY_CHAINS: [ChainWithIcon, ...ChainWithIcon[]] = [polygonMainnetWithIcon, ...SUPPORTED_CHAINS]
+
+/**
+ * Chains that can no longer be deployed to but still appear in stored
+ * deployment records. They are kept only so /contracts and /api/stats can name
+ * them. Celo retired Alfajores in September 2025: its RPC no longer resolves and
+ * both of its explorers now redirect to Celo Sepolia, so the entry carries no
+ * explorer and those records render without explorer links.
+ */
+export const RETIRED_CHAINS: ChainWithIcon[] = [
+  {
+    ...celoAlfajores,
+    blockExplorers: undefined,
+    iconBackground: "#35D07F",
+    iconUrl: "/assets/chains/celo-logo.png",
+    name: "Celo Alfajores (retired)",
+  },
+]
 
 export const viemTransports = Object.fromEntries(
   SUPPORTED_CHAINS.map((chain) => [[chain.id], http(RPC_URLS[chain.id])])

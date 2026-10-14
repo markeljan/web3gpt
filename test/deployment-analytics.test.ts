@@ -22,6 +22,12 @@ const deployments: DeploymentRecordBase[] = [
     deployHash: "0x800021",
   },
   {
+    chainId: 44_787,
+    cid: "celo-alfajores-cid",
+    contractAddress: "0x447870",
+    deployHash: "0x447871",
+  },
+  {
     chainId: 31,
     cid: "legacy-chain-cid",
     contractAddress: "0x310",
@@ -31,10 +37,10 @@ const deployments: DeploymentRecordBase[] = [
 
 describe("deployment analytics", () => {
   test("uses the dashboard identity to deduplicate records", () => {
-    expect(deduplicateDeployments(deployments)).toHaveLength(3)
+    expect(deduplicateDeployments(deployments)).toHaveLength(4)
   })
 
-  test("reports Polygon mainnet first and keeps legacy chains in the total", () => {
+  test("reports Polygon mainnet first, names retired chains, and keeps legacy chains in the total", () => {
     const analytics = buildPublicAnalytics({
       customAgentsCreated: 77,
       deployments,
@@ -42,7 +48,7 @@ describe("deployment analytics", () => {
     })
 
     expect(analytics.customAgentsCreated).toBe(77)
-    expect(analytics.recordedDeployments.total).toBe(3)
+    expect(analytics.recordedDeployments.total).toBe(4)
     expect(analytics.recordedDeployments.byChain).toEqual([
       {
         chainId: 137,
@@ -53,6 +59,12 @@ describe("deployment analytics", () => {
       {
         chainId: 80_002,
         chainName: "Polygon Amoy",
+        network: "testnet",
+        recordedDeployments: 1,
+      },
+      {
+        chainId: 44_787,
+        chainName: "Celo Alfajores (retired)",
         network: "testnet",
         recordedDeployments: 1,
       },

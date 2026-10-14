@@ -26,7 +26,7 @@ import { polygonAmoy } from "viem/chains"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getChainById } from "@/lib/config"
+import { getChainById, getDisplayChainById } from "@/lib/config"
 import { AGENT_DEPLOY_CHAINS } from "@/lib/constants"
 import { deduplicateDeployments } from "@/lib/deployment-analytics"
 import type { DeploymentRecordBase } from "@/lib/types"
@@ -439,7 +439,10 @@ export function ContractsDashboard({
                   <div className="space-y-2">
                     {leaderboardDeployments.length > 0 ? (
                       leaderboardDeployments.map((deployment, index) => {
-                        const chain = getChainById(deployment.chainId)
+                        const chain = getDisplayChainById(deployment.chainId)
+                        const addressUrl = chain
+                          ? getExplorerUrl({ hash: deployment.contractAddress, type: "address", viemChain: chain })
+                          : ""
                         const isTop3 = index < TOP_POSITIONS_COUNT
 
                         return (
@@ -466,20 +469,16 @@ export function ContractsDashboard({
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                   <p className="truncate font-medium font-mono text-sm">{deployment.contractAddress}</p>
-                                  {chain && (
+                                  {addressUrl ? (
                                     <Link
                                       className="opacity-0 transition-opacity group-hover:opacity-100"
-                                      href={getExplorerUrl({
-                                        hash: deployment.contractAddress,
-                                        type: "address",
-                                        viemChain: chain,
-                                      })}
+                                      href={addressUrl}
                                       rel="noopener noreferrer"
                                       target="_blank"
                                     >
                                       <ExternalLink className="h-3 w-3 text-muted-foreground hover:text-primary" />
                                     </Link>
-                                  )}
+                                  ) : null}
                                 </div>
                                 {chain && (
                                   <div className="mt-1 flex items-center gap-1.5">
@@ -587,7 +586,13 @@ export function ContractsDashboard({
               <>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
                   {paginatedDeployments.map((deployment, index) => {
-                    const chain = getChainById(deployment.chainId)
+                    const chain = getDisplayChainById(deployment.chainId)
+                    const addressUrl = chain
+                      ? getExplorerUrl({ hash: deployment.contractAddress, type: "address", viemChain: chain })
+                      : ""
+                    const txUrl = chain
+                      ? getExplorerUrl({ hash: deployment.deployHash, type: "tx", viemChain: chain })
+                      : ""
 
                     return (
                       <Card
@@ -625,14 +630,10 @@ export function ContractsDashboard({
                               <MapPin className="h-3 w-3" />
                               <span>Contract Address</span>
                             </div>
-                            {chain ? (
+                            {addressUrl ? (
                               <Link
                                 className="group flex items-center gap-2 rounded-lg bg-muted/50 p-2 transition-colors hover:bg-muted/80"
-                                href={getExplorerUrl({
-                                  hash: deployment.contractAddress,
-                                  type: "address",
-                                  viemChain: chain,
-                                })}
+                                href={addressUrl}
                                 rel="noopener noreferrer"
                                 target="_blank"
                               >
@@ -652,14 +653,10 @@ export function ContractsDashboard({
                               <HashIcon className="h-3 w-3" />
                               <span>Transaction Hash</span>
                             </div>
-                            {chain ? (
+                            {txUrl ? (
                               <Link
                                 className="group flex items-center gap-2 rounded-lg bg-muted/50 p-2 transition-colors hover:bg-muted/80"
-                                href={getExplorerUrl({
-                                  hash: deployment.deployHash,
-                                  type: "tx",
-                                  viemChain: chain,
-                                })}
+                                href={txUrl}
                                 rel="noopener noreferrer"
                                 target="_blank"
                               >
