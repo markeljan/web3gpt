@@ -94,7 +94,10 @@ describe("subscribeToUpdatesAction", () => {
   test("records the address on the signed-in account", async () => {
     sessionUserId = USER
     await subscribeToUpdatesAction("me@example.com")
-    expect(hashes.get(`user:details:${USER}`)).toMatchObject({ email_subscribed: true, subscribed_email: "me@example.com" })
+    expect(hashes.get(`user:details:${USER}`)).toMatchObject({
+      email_subscribed: true,
+      subscribed_email: "me@example.com",
+    })
   })
 
   test("is rate limited per IP", async () => {

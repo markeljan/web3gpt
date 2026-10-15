@@ -132,8 +132,6 @@ export const LIMITS = {
   chatAnonymous: { bucket: "chat:anon", limit: envInt("RATE_LIMIT_CHAT_ANON", 20), windowSeconds: TEN_MINUTES },
   /** Signed-in chat turns per user. */
   chatUser: { bucket: "chat:user", limit: envInt("RATE_LIMIT_CHAT_USER", 60), windowSeconds: TEN_MINUTES },
-  /** Product-update sign-ups, per IP. Generous for real people, tight enough to stop list stuffing. */
-  emailSubscribe: { bucket: "email", limit: envInt("RATE_LIMIT_EMAIL", 5), windowSeconds: TEN_MINUTES },
   /** Contract compiles for wallet deployments, per IP. */
   compile: { bucket: "compile", limit: envInt("RATE_LIMIT_COMPILE", 20), windowSeconds: TEN_MINUTES },
   /** Polygon mainnet deployments by the server wallet, across all callers, per day. */
@@ -154,6 +152,8 @@ export const LIMITS = {
     limit: envInt("TESTNET_DEPLOY_HOURLY_LIMIT_PER_CALLER", 10),
     windowSeconds: ONE_HOUR,
   },
+  /** Product-update sign-ups, per IP. Generous for real people, tight enough to stop list stuffing. */
+  emailSubscribe: { bucket: "email", limit: envInt("RATE_LIMIT_EMAIL", 5), windowSeconds: TEN_MINUTES },
   /** Recording wallet deployments, per IP. */
   finalize: { bucket: "finalize", limit: envInt("RATE_LIMIT_FINALIZE", 20), windowSeconds: TEN_MINUTES },
   /** Skill turns that call the model, per IP and per chat. */
