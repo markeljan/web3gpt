@@ -87,9 +87,7 @@ mock.module("@/lib/auth", () => ({
 }))
 
 const { getChat, getPublishedChat, storeChat } = await import("@/lib/data/kv")
-const { clearChatsAction, deleteChatAction, getUserFieldAction, shareChatAction, storeEmailAction } = await import(
-  "@/lib/actions/chat"
-)
+const { clearChatsAction, deleteChatAction, shareChatAction } = await import("@/lib/actions/chat")
 
 const OWNER = "1001"
 const ATTACKER = "2002"
@@ -251,19 +249,5 @@ describe("chat server actions", () => {
     expect(await shareChatAction("c1")).toBeUndefined()
     expect(await deleteChatAction("c1")).toBeUndefined()
     expect(hashes.has("chat:c1")).toBe(true)
-  })
-
-  test("storeEmailAction rejects junk and normalizes addresses", async () => {
-    await storeEmailAction("not an email")
-    await storeEmailAction(`${"a".repeat(300)}@x.io`)
-    await storeEmailAction("  Person@Example.COM ")
-    expect([...(sets.get("emails:list") ?? [])]).toEqual(["person@example.com"])
-  })
-
-  test("getUserFieldAction only exposes allowlisted fields", async () => {
-    hashes.set(`user:details:${OWNER}`, { email: "private@example.com", email_subscribed: true })
-    sessionUserId = OWNER
-    expect(await getUserFieldAction("email")).toBeNull()
-    expect(await getUserFieldAction("email_subscribed")).toBe("true")
   })
 })

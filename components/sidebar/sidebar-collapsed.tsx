@@ -8,7 +8,7 @@ import { UserMenu } from "@/components/header/user-menu"
 import { NAVIGATION_ITEMS } from "@/components/sidebar/constants"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import type { AuthUser } from "@/lib/auth-client"
+import { type AuthUser, signIn } from "@/lib/auth-client"
 import { cn } from "@/lib/utils"
 
 type SidebarCollapsedProps = {
@@ -69,27 +69,21 @@ export function SidebarCollapsed({ user }: SidebarCollapsedProps) {
       {/* User Profile at Bottom */}
       <div className="mt-auto">
         {user ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="h-10 w-10">
-                <UserMenu user={user} variant="collapsed" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <div className="text-xs">
-                <div className="font-medium">{user.name}</div>
-                <div className="text-muted-foreground">{user.email}</div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
+          <UserMenu user={user} variant="collapsed" />
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button aria-label="Sign in" className="h-10 w-10 p-0" size="sm" variant="ghost">
+              <Button
+                aria-label="Sign in with GitHub"
+                className="h-10 w-10 p-0"
+                onClick={() => signIn.social({ callbackURL: "/", provider: "github" })}
+                size="sm"
+                variant="ghost"
+              >
                 <User className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="right">Sign in</TooltipContent>
+            <TooltipContent side="right">Sign in with GitHub</TooltipContent>
           </Tooltip>
         )}
       </div>

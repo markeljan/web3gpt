@@ -1,21 +1,13 @@
 "use client"
 
+import { ChevronsUpDown, LoaderCircle, LogOut, Mail, Monitor, Moon, Sun, Trash2 } from "lucide-react"
 import Image from "next/image"
-import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { useState, useTransition } from "react"
-import {
-  IconClear,
-  IconCog,
-  IconGitHub,
-  IconMoon,
-  IconPC,
-  IconSpinner,
-  IconSun,
-  IconTelegram,
-  IconTwitter,
-} from "@/components/icons"
-import { SignOutButton } from "@/components/sign-out-button"
+import { useEffect, useState, useTransition } from "react"
+import { toast } from "sonner"
+import { EarlyAccessDialog } from "@/components/early-access/early-access-card"
+import { IconGitHub, IconTelegram, IconTwitter } from "@/components/icons"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,302 +17,275 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { clearChatsAction } from "@/lib/actions/chat"
-import type { AuthUser } from "@/lib/auth-client"
+import { unsubscribeFromUpdatesAction } from "@/lib/actions/updates"
+import { type AuthUser, signOut } from "@/lib/auth-client"
+import { useUpdatesSubscription } from "@/lib/hooks/use-updates-subscription"
 import { cn } from "@/lib/utils"
 
-function getUserInitials(name: string) {
-  const [firstName, lastName] = name.split(" ")
+const THEMES = [
+  { icon: Sun, label: "Light", value: "light" },
+  { icon: Moon, label: "Dark", value: "dark" },
+  { icon: Monitor, label: "System", value: "system" },
+] as const
 
-  return lastName ? `${firstName[0]}${lastName[0]}` : firstName.slice(0, 2)
+const COMMUNITY_LINKS = [
+  { href: "https://x.com/w3gptai", icon: IconTwitter, label: "Follow on X" },
+  { href: "https://t.me/w3gptai", icon: IconTelegram, label: "Telegram community" },
+  { href: "https://github.com/markeljan/web3gpt", icon: IconGitHub, label: "GitHub" },
+] as const
+
+const WHITESPACE = /\s+/
+
+const getUserInitials = (name: string) => {
+  const [first = "", last] = name.trim().split(WHITESPACE)
+  return (last ? `${first[0] ?? ""}${last[0] ?? ""}` : first.slice(0, 2)).toUpperCase()
+}
+
+/** GitHub avatars accept a size parameter; anything else is used as is. */
+const getAvatarUrl = (image: string, size: number) => {
+  try {
+    const url = new URL(image)
+    if (url.hostname.endsWith("githubusercontent.com")) {
+      url.searchParams.set("s", String(size))
+    }
+    return url.toString()
+  } catch {
+    return image
+  }
+}
+
+function UserAvatar({ user, className }: { user: AuthUser; className?: string }) {
+  if (user.image) {
+    return (
+      <Image
+        alt=""
+        className={cn("size-8 shrink-0 select-none rounded-full ring-1 ring-border", className)}
+        height={32}
+        src={getAvatarUrl(user.image, 64)}
+        width={32}
+      />
+    )
+  }
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "flex size-8 shrink-0 select-none items-center justify-center rounded-full bg-muted font-medium text-muted-foreground text-xs",
+        className
+      )}
+    >
+      {user.name ? getUserInitials(user.name) : null}
+    </span>
+  )
 }
 
 type UserMenuProps = {
   user: AuthUser
-  variant?: "header" | "sidebar" | "collapsed"
-  showClearHistory?: boolean
+  /** `sidebar`: full-width row with name and email. `collapsed`: avatar only. */
+  variant?: "sidebar" | "collapsed"
 }
 
-export const UserMenu = ({ user, variant = "header", showClearHistory = false }: UserMenuProps) => {
+export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const { setTheme, theme } = useTheme()
-  const [_, startTransition] = useTransition()
-  const [clearHistoryOpen, setClearHistoryOpen] = useState(false)
-  const [isClearPending, startClearTransition] = useTransition()
+  const { hydrate, resetAccount, setSubscribed, subscribed, syncWithServer } = useUpdatesSubscription()
+  const [updatesDialogOpen, setUpdatesDialogOpen] = useState(false)
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [isClearing, startClearing] = useTransition()
+  const [isSigningOut, startSigningOut] = useTransition()
 
-  const renderClearHistory = () => {
-    if (!showClearHistory) {
-      return null
+  useEffect(() => {
+    hydrate()
+    syncWithServer()
+  }, [hydrate, syncWithServer])
+
+  const handleUpdatesChange = async (checked: boolean) => {
+    if (checked) {
+      setUpdatesDialogOpen(true)
+      return
     }
-
-    return (
-      <>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <AlertDialog onOpenChange={setClearHistoryOpen} open={clearHistoryOpen}>
-            <AlertDialogTrigger asChild>
-              <Button className="h-auto w-full justify-start p-0 font-normal" disabled={isClearPending} variant="ghost">
-                {isClearPending ? <IconSpinner className="mr-2" /> : null}
-                <IconClear className="mr-2 h-4 w-4" />
-                Clear History
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete your chat history and remove your data from our servers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isClearPending}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  disabled={isClearPending}
-                  onClick={(event) => {
-                    event.preventDefault()
-                    startClearTransition(async () => {
-                      await clearChatsAction()
-                      setClearHistoryOpen(false)
-                    })
-                  }}
-                >
-                  {isClearPending ? <IconSpinner className="mr-2 animate-spin" /> : null}
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </DropdownMenuItem>
-      </>
-    )
+    setSubscribed(false)
+    try {
+      // `undefined` means the session has expired.
+      if (!(await unsubscribeFromUpdatesAction())) {
+        throw new Error("not signed in")
+      }
+      toast.success("Unsubscribed from product updates")
+    } catch {
+      setSubscribed(true)
+      toast.error("Couldn't unsubscribe. Please try again.")
+    }
   }
 
-  const renderSettingsItems = () => (
-    <>
-      <DropdownMenuSeparator />
-      <div className="mx-1 flex flex-row justify-between px-6 py-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              className="h-8 w-8"
-              onClick={() => {
-                startTransition(() => {
-                  setTheme("light")
-                })
-              }}
-              size="icon"
-              variant={theme === "light" ? "default" : "ghost"}
-            >
-              <IconSun className="h-4 w-4" />
-              <span className="sr-only">Light theme</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Light theme</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              className="h-8 w-8"
-              onClick={() => {
-                startTransition(() => {
-                  setTheme("dark")
-                })
-              }}
-              size="icon"
-              variant={theme === "dark" ? "default" : "ghost"}
-            >
-              <IconMoon className="h-4 w-4" />
-              <span className="sr-only">Dark theme</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Dark theme</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              className="h-8 w-8"
-              onClick={() => {
-                startTransition(() => {
-                  setTheme("system")
-                })
-              }}
-              size="icon"
-              variant={theme === "system" ? "default" : "ghost"}
-            >
-              <IconPC className="h-4 w-4" />
-              <span className="sr-only">System theme</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>System theme</TooltipContent>
-        </Tooltip>
-      </div>
-      <DropdownMenuSeparator />
-      <div className="mx-1 flex flex-row justify-between px-4 py-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              className={cn(buttonVariants({ size: "icon", variant: "ghost" }), "h-8 w-8")}
-              href="https://x.com/w3gptai"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <IconTwitter className="h-4 w-4" />
-              <span className="sr-only">X</span>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent>Twitter</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              className={cn(buttonVariants({ size: "icon", variant: "ghost" }), "h-8 w-8")}
-              href="https://t.me/w3gptai"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <IconTelegram className="h-4 w-4" />
-              <span className="sr-only">Telegram</span>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent>Telegram</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link
-              className={cn(buttonVariants({ size: "icon", variant: "ghost" }), "h-8 w-8")}
-              href="https://github.com/markeljan/web3gpt"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <IconGitHub className="h-4 w-4" />
-              <span className="sr-only">Github</span>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent>Github</TooltipContent>
-        </Tooltip>
-      </div>
-    </>
-  )
-  if (variant === "collapsed") {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button className="h-10 w-10 rounded-full p-0" variant="ghost">
-            {user?.image ? (
-              <Image
-                alt="User profile image"
-                className="h-8 w-8 select-none rounded-full ring-1 ring-zinc-100/10 transition-opacity duration-300 hover:opacity-80"
-                height={32}
-                src={`${user.image}&s=60`}
-                width={32}
-              />
-            ) : (
-              <div className="flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full bg-muted/50 font-medium text-muted-foreground text-xs uppercase">
-                {user?.name ? getUserInitials(user?.name) : null}
-              </div>
-            )}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[220px]" side="right" sideOffset={8}>
-          <DropdownMenuItem className="flex-col items-start">
-            <div className="font-medium text-xs">{user?.name}</div>
-            <div className="text-xs text-zinc-500">{user?.email}</div>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <SignOutButton />
-          </DropdownMenuItem>
-          {renderClearHistory()}
-          {renderSettingsItems()}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
+  const handleSignOut = () => {
+    startSigningOut(async () => {
+      await signOut()
+      resetAccount()
+      router.push("/")
+      router.refresh()
+    })
   }
 
-  if (variant === "sidebar") {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button className="h-auto w-full justify-start p-3 hover:bg-accent/50" variant="ghost">
-            <div className="flex w-full items-center gap-3">
-              {user?.image ? (
-                <Image
-                  alt="User profile image"
-                  className="size-8 select-none rounded-full ring-1 ring-zinc-100/10 transition-opacity duration-300 hover:opacity-80"
-                  height={32}
-                  src={`${user.image}&s=60`}
-                  width={32}
-                />
-              ) : (
-                <div className="flex size-8 shrink-0 select-none items-center justify-center rounded-full bg-muted/50 font-medium text-muted-foreground text-xs uppercase">
-                  {user?.name ? getUserInitials(user?.name) : null}
-                </div>
-              )}
-              <div className="min-w-0 flex-1 text-left">
-                <div className="truncate font-medium text-sm">{user?.name}</div>
-                <div className="truncate text-muted-foreground text-xs">{user?.email}</div>
-              </div>
-              <IconCog className="mr-2 size-4 text-muted-foreground" />
-            </div>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[220px]" sideOffset={8}>
-          <DropdownMenuItem className="flex-col items-start">
-            <div className="font-medium text-xs">{user?.name}</div>
-            <div className="text-xs text-zinc-500">{user?.email}</div>
-          </DropdownMenuItem>
-          <DropdownMenuItem>
-            <SignOutButton />
-          </DropdownMenuItem>
-          {renderClearHistory()}
-          {renderSettingsItems()}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )
+  const handleClearHistory = () => {
+    startClearing(async () => {
+      try {
+        await clearChatsAction()
+        setClearDialogOpen(false)
+        toast.success("Chat history deleted")
+        // The open chat no longer exists.
+        if (pathname.startsWith("/chat/")) {
+          router.push("/")
+        }
+        router.refresh()
+      } catch {
+        toast.error("Couldn't delete chat history. Please try again.")
+      }
+    })
   }
+
+  const trigger =
+    variant === "collapsed" ? (
+      <Button aria-label={`Account menu for ${user.name}`} className="size-10 rounded-full p-0" variant="ghost">
+        <UserAvatar user={user} />
+      </Button>
+    ) : (
+      <Button
+        aria-label={`Account menu for ${user.name}`}
+        className="h-auto w-full justify-start gap-3 p-3 text-left font-normal hover:bg-accent/60 data-[state=open]:bg-accent/60"
+        variant="ghost"
+      >
+        <UserAvatar user={user} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-medium text-sm">{user.name}</span>
+          <span className="block truncate text-muted-foreground text-xs">{user.email}</span>
+        </span>
+        <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      </Button>
+    )
 
   return (
-    <div className="flex items-center justify-between">
+    <>
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button className="px-2" variant="ghost">
-            {user?.image ? (
-              <Image
-                alt="User profile image"
-                className="size-6 select-none rounded-full ring-1 ring-zinc-100/10 transition-opacity duration-300 hover:opacity-80"
-                height={24}
-                src={`${user.image}&s=60`}
-                width={24}
-              />
-            ) : (
-              <div className="flex size-7 shrink-0 select-none items-center justify-center rounded-full bg-muted/50 font-medium text-muted-foreground text-xs uppercase">
-                {user?.name ? getUserInitials(user?.name) : null}
-              </div>
-            )}
-            <span className="ml-2 hidden lg:flex">{user?.name}</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[220px]" sideOffset={8}>
-          <DropdownMenuItem className="flex-col items-start">
-            <div className="font-medium text-xs">{user?.name}</div>
-            <div className="text-xs text-zinc-500">{user?.email}</div>
+        {variant === "collapsed" ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="right">Account and settings</TooltipContent>
+          </Tooltip>
+        ) : (
+          <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+        )}
+
+        <DropdownMenuContent
+          align={variant === "collapsed" ? "end" : "start"}
+          className="w-(--radix-dropdown-menu-trigger-width) min-w-60"
+          side={variant === "collapsed" ? "right" : "top"}
+          sideOffset={8}
+        >
+          <DropdownMenuLabel className="flex items-center gap-3 font-normal">
+            <UserAvatar user={user} />
+            <span className="min-w-0">
+              <span className="block truncate font-medium text-sm">{user.name}</span>
+              <span className="block truncate text-muted-foreground text-xs">{user.email}</span>
+            </span>
+          </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className="py-1 font-medium text-muted-foreground text-xs">Theme</DropdownMenuLabel>
+          <DropdownMenuRadioGroup onValueChange={setTheme} value={theme}>
+            {THEMES.map(({ icon: Icon, label, value }) => (
+              // Keep the menu open so the change can be previewed.
+              <DropdownMenuRadioItem key={value} onSelect={(event) => event.preventDefault()} value={value}>
+                <Icon aria-hidden />
+                {label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuCheckboxItem checked={subscribed} onCheckedChange={handleUpdatesChange}>
+            <Mail aria-hidden />
+            Product updates
+          </DropdownMenuCheckboxItem>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            {COMMUNITY_LINKS.map(({ href, icon: Icon, label }) => (
+              <DropdownMenuItem asChild key={href}>
+                <a href={href} rel="noopener noreferrer" target="_blank">
+                  <Icon aria-hidden />
+                  {label}
+                </a>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-600 focus:bg-red-500/10 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
+            onSelect={() => setClearDialogOpen(true)}
+          >
+            <Trash2 aria-hidden />
+            Delete chat history
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <SignOutButton />
+          <DropdownMenuItem
+            disabled={isSigningOut}
+            onSelect={(event) => {
+              event.preventDefault()
+              handleSignOut()
+            }}
+          >
+            {isSigningOut ? <LoaderCircle aria-hidden className="animate-spin" /> : <LogOut aria-hidden />}
+            Log out
           </DropdownMenuItem>
-          {renderClearHistory()}
-          {renderSettingsItems()}
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+
+      {/* Dialogs live outside the menu so closing the menu doesn't unmount them. */}
+      <EarlyAccessDialog onOpenChange={setUpdatesDialogOpen} open={updatesDialogOpen} />
+
+      <AlertDialog onOpenChange={(open) => !isClearing && setClearDialogOpen(open)} open={clearDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all chat history?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes every saved chat from our servers, including shared links. It can't be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isClearing}
+              onClick={(event) => {
+                event.preventDefault()
+                handleClearHistory()
+              }}
+            >
+              {isClearing ? <LoaderCircle aria-hidden className="mr-2 size-4 animate-spin" /> : null}
+              Delete history
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

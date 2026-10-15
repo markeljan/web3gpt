@@ -34,12 +34,6 @@ export const formatDate = (input: string | number | Date): string => {
   })
 }
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-export const isValidEmail = (email: string): boolean => {
-  const regex = EMAIL_REGEX
-  return regex.test(email)
-}
-
 export const getIpfsUrl = (cid: string): string => `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/ipfs/${cid}`
 
 const HASH_PREFIX_REGEX = /^0x/

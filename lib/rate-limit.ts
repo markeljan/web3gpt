@@ -132,6 +132,8 @@ export const LIMITS = {
   chatAnonymous: { bucket: "chat:anon", limit: envInt("RATE_LIMIT_CHAT_ANON", 20), windowSeconds: TEN_MINUTES },
   /** Signed-in chat turns per user. */
   chatUser: { bucket: "chat:user", limit: envInt("RATE_LIMIT_CHAT_USER", 60), windowSeconds: TEN_MINUTES },
+  /** Product-update sign-ups, per IP. Generous for real people, tight enough to stop list stuffing. */
+  emailSubscribe: { bucket: "email", limit: envInt("RATE_LIMIT_EMAIL", 5), windowSeconds: TEN_MINUTES },
   /** Contract compiles for wallet deployments, per IP. */
   compile: { bucket: "compile", limit: envInt("RATE_LIMIT_COMPILE", 20), windowSeconds: TEN_MINUTES },
   /** Polygon mainnet deployments by the server wallet, across all callers, per day. */
