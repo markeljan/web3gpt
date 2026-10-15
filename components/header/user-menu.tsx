@@ -4,13 +4,12 @@ import { ChevronsUpDown, LoaderCircle, LogOut, Mail, Monitor, Moon, Sun, Trash2 
 import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { EarlyAccessDialog } from "@/components/early-access/early-access-card"
 import { IconGitHub, IconTelegram, IconTwitter } from "@/components/icons"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -31,6 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { clearChatsAction } from "@/lib/actions/chat"
 import { unsubscribeFromUpdatesAction } from "@/lib/actions/updates"
@@ -43,6 +43,9 @@ const THEMES = [
   { icon: Moon, label: "Dark", value: "dark" },
   { icon: Monitor, label: "System", value: "system" },
 ] as const
+
+/** Typed to confirm deleting all chats, so it can't happen by a stray click. */
+const DELETE_CONFIRMATION = "DELETE ALL CHAT HISTORY"
 
 const COMMUNITY_LINKS = [
   { href: "https://x.com/w3gptai", icon: IconTwitter, label: "Follow on X" },
@@ -108,6 +111,9 @@ export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
   const { hydrate, resetAccount, setSubscribed, subscribed, syncWithServer } = useUpdatesSubscription()
   const [updatesDialogOpen, setUpdatesDialogOpen] = useState(false)
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
+  const deleteConfirmationRef = useRef<HTMLInputElement>(null)
+  const canDeleteHistory = deleteConfirmation.trim() === DELETE_CONFIRMATION
   const [isClearing, startClearing] = useTransition()
   const [isSigningOut, startSigningOut] = useTransition()
 
@@ -143,11 +149,24 @@ export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
     })
   }
 
+  const handleClearDialogChange = (open: boolean) => {
+    if (isClearing) {
+      return
+    }
+    setClearDialogOpen(open)
+    // Start from an empty field every time the dialog opens.
+    setDeleteConfirmation("")
+  }
+
   const handleClearHistory = () => {
+    if (!canDeleteHistory || isClearing) {
+      return
+    }
     startClearing(async () => {
       try {
         await clearChatsAction()
         setClearDialogOpen(false)
+        setDeleteConfirmation("")
         toast.success("Chat history deleted")
         // The open chat no longer exists.
         if (pathname.startsWith("/chat/")) {
@@ -241,7 +260,7 @@ export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-red-600 focus:bg-red-500/10 focus:text-red-600 dark:text-red-400 dark:focus:text-red-400"
-            onSelect={() => setClearDialogOpen(true)}
+            onSelect={() => handleClearDialogChange(true)}
           >
             <Trash2 aria-hidden />
             Delete chat history
@@ -262,28 +281,54 @@ export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
       {/* Dialogs live outside the menu so closing the menu doesn't unmount them. */}
       <EarlyAccessDialog onOpenChange={setUpdatesDialogOpen} open={updatesDialogOpen} />
 
-      <AlertDialog onOpenChange={(open) => !isClearing && setClearDialogOpen(open)} open={clearDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete all chat history?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently deletes every saved chat from our servers, including shared links. It can't be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isClearing}
-              onClick={(event) => {
-                event.preventDefault()
-                handleClearHistory()
-              }}
-            >
-              {isClearing ? <LoaderCircle aria-hidden className="mr-2 size-4 animate-spin" /> : null}
-              Delete history
-            </AlertDialogAction>
-          </AlertDialogFooter>
+      <AlertDialog onOpenChange={handleClearDialogChange} open={clearDialogOpen}>
+        <AlertDialogContent
+          onOpenAutoFocus={(event) => {
+            // Start in the confirmation field rather than on Cancel.
+            event.preventDefault()
+            deleteConfirmationRef.current?.focus()
+          }}
+        >
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              handleClearHistory()
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete all chat history?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently deletes every saved chat from our servers, including shared links. It can't be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="grid gap-2">
+              <label className="text-sm" htmlFor="delete-history-confirmation">
+                Type <span className="select-all font-mono font-semibold">{DELETE_CONFIRMATION}</span> to confirm.
+              </label>
+              <Input
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
+                disabled={isClearing}
+                id="delete-history-confirmation"
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                ref={deleteConfirmationRef}
+                spellCheck={false}
+                value={deleteConfirmation}
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isClearing} type="button">
+                Cancel
+              </AlertDialogCancel>
+              {/* A plain submit button: AlertDialogAction would close the dialog before the delete finishes. */}
+              <Button disabled={!canDeleteHistory || isClearing} type="submit" variant="destructive">
+                {isClearing ? <LoaderCircle aria-hidden className="mr-2 size-4 animate-spin" /> : null}
+                Delete history
+              </Button>
+            </AlertDialogFooter>
+          </form>
         </AlertDialogContent>
       </AlertDialog>
     </>
