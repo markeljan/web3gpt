@@ -123,7 +123,7 @@ Required:
 
 | Variable | Purpose |
 | --- | --- |
-| `OPENAI_API_KEY` | Model provider (agents run on `gpt-6-luna` by default) |
+| `OPENAI_API_KEY` | Model provider (agents run on `gpt-6.1-terra` at medium reasoning effort by default) |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Redis REST endpoint for chats, agents, deployments, rate limits. The legacy Vercel KV names `KV_REST_API_URL` / `KV_REST_API_TOKEN` also work. |
 | `DEPLOYER_PRIVATE_KEY` | Hex key (no `0x`) of the wallet that pays for agent deployments |
 | `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_SECRET` | GitHub sign-in (Better Auth) |
@@ -141,7 +141,7 @@ Recommended:
 | `INFURA_API_KEY` | ENS / Unstoppable Domains resolution tools |
 | `NEXT_PUBLIC_TENDERLY_API_KEY` | Tenderly RPC for chains that use it |
 | `POLYGON_MAINNET_RPC_URL`, `POLYGON_AMOY_RPC_URL`, `NEXT_PUBLIC_POLYGON_AMOY_RPC_URL` | RPC overrides |
-| `AI_MODEL` | Run agents on a different OpenAI model, e.g. `gpt-6.1-sol` for stronger Solidity at higher cost |
+| `AI_MODEL` | Run agents on a different OpenAI model, e.g. `gpt-6-luna` for ~10x lower cost, or `gpt-6.1-sol` for the hardest contracts at higher cost |
 
 Optional limit overrides, with defaults in `lib/rate-limit.ts`:
 `MAINNET_DEPLOY_DAILY_LIMIT`, `MAINNET_DEPLOY_DAILY_LIMIT_PER_CALLER`,
