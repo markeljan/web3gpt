@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { DEFAULT_AI_MODEL, getAiModel } from "@/lib/ai-model"
+import { AI_REASONING_EFFORT, DEFAULT_AI_MODEL, getAiModel } from "@/lib/ai-model"
 
 const original = process.env.AI_MODEL
 
@@ -12,10 +12,14 @@ afterEach(() => {
 })
 
 describe("AI model selection", () => {
-  test("defaults to gpt-6-luna, the replacement for the deprecated gpt-5.4-nano", () => {
+  test("defaults to gpt-6.1-terra", () => {
     delete process.env.AI_MODEL
-    expect(DEFAULT_AI_MODEL).toBe("gpt-6-luna")
-    expect(getAiModel()).toBe("gpt-6-luna")
+    expect(DEFAULT_AI_MODEL).toBe("gpt-6.1-terra")
+    expect(getAiModel()).toBe("gpt-6.1-terra")
+  })
+
+  test("reasons at medium effort", () => {
+    expect(AI_REASONING_EFFORT).toBe("medium")
   })
 
   test("AI_MODEL overrides the default", () => {
