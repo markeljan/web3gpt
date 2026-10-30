@@ -60,7 +60,8 @@ Lefthook runs `bunx ultracite fix` on the staged JS/TS/JSON/CSS files before eac
   - `constants.ts`: built-in agents, chains, RPC URLs, compiler default
   - `config.ts`: chain lookup, explorer details, app URLs
   - `agent-chat.ts`: system prompt, history window, `streamAgentReply` / `generateAgentReply`
-  - `ai-model.ts`: the OpenAI model (`gpt-6-luna`, overridable with `AI_MODEL`)
+  - `ai-model.ts`: the OpenAI model and reasoning effort (`gpt-6.1-terra` at medium, model
+    overridable with `AI_MODEL`)
   - `tools.ts`: tools the model can call (`deployContract`, `resolveDomain`, `resolveAddress`,
     `createAgent`)
   - `redis.ts`: the one Redis client (reads `UPSTASH_REDIS_REST_*`, falls back to `KV_REST_API_*`)
