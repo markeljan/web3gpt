@@ -1,6 +1,6 @@
 import { type OpenAIResponsesProviderOptions, openai } from "@ai-sdk/openai"
 import { convertToModelMessages, generateText, isStepCount, streamText, type UIMessage } from "ai"
-import { getAiModel } from "@/lib/ai-model"
+import { AI_REASONING_EFFORT, getAiModel } from "@/lib/ai-model"
 import { AGENT_DEPLOY_CHAINS, DEFAULT_AGENT, DEFAULT_COMPILER_VERSION, DEFAULT_TOOL_NAMES } from "@/lib/constants"
 import { getAgentById } from "@/lib/data/agents"
 import { getTools } from "@/lib/tools"
@@ -15,7 +15,7 @@ type AgentChatParams = {
 
 const providerOptions = {
   openai: {
-    reasoningEffort: "medium",
+    reasoningEffort: AI_REASONING_EFFORT,
     reasoningSummary: "concise",
   } satisfies OpenAIResponsesProviderOptions,
 }
