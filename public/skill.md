@@ -94,8 +94,11 @@ The endpoint is public, so usage is metered:
 | Testnet deployments | 10 per caller per hour |
 | Polygon mainnet deployments | 2 per caller per day, within a shared daily budget |
 
-- **Over a request limit:** HTTP `429` with a `Retry-After` header (seconds) and
-  `X-RateLimit-Limit` / `X-RateLimit-Remaining`. Wait and retry; don't hammer the endpoint.
+- **Every response** carries `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset`
+  (seconds until the window resets), also sent as `X-RateLimit-*`. They describe the limit
+  you will hit first, so slow down as `RateLimit-Remaining` approaches 0.
+- **Over a request limit:** HTTP `429` with a `Retry-After` header (seconds). Wait and retry;
+  don't hammer the endpoint.
 - **Over a deployment limit:** the agent replies with an explanation (try later, use a testnet,
   or deploy from your own wallet at w3gpt.ai) instead of deploying.
 

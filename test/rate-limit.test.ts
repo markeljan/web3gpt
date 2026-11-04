@@ -3,7 +3,9 @@ import { describe, expect, mock, test } from "bun:test"
 mock.module("server-only", () => ({}))
 mock.module("@/lib/redis", () => ({ redis: {} }))
 
-const { getClientIp, getWindow, hitRateLimit, hitRateLimits, rateLimitKey } = await import("@/lib/rate-limit")
+const { getClientIp, getWindow, hitRateLimit, hitRateLimits, rateLimitHeaders, rateLimitKey } = await import(
+  "@/lib/rate-limit"
+)
 const { checkDeployAllowance, getCallerId, isMainnetChain } = await import("@/lib/deploy-limits")
 
 const memoryStore = () => {
@@ -88,6 +90,39 @@ describe("fixed-window rate limiter", () => {
     expect(result.ok).toBe(false)
     expect(result.bucket).toBe("tight")
     expect([...store.counts.keys()].some((key) => key.includes("loose"))).toBe(false)
+  })
+
+  test("hitRateLimits reports the rule with the least room left when all pass", async () => {
+    const store = memoryStore()
+    const result = await hitRateLimits(
+      [
+        { id: "a", rule: { bucket: "roomy", limit: 10, windowSeconds: 60 } },
+        { id: "a", rule: { bucket: "snug", limit: 2, windowSeconds: 60 } },
+        { id: "a", rule: { bucket: "middle", limit: 5, windowSeconds: 60 } },
+      ],
+      { now: NOW, store }
+    )
+    expect(result).toMatchObject({ bucket: "snug", limit: 2, ok: true, remaining: 1 })
+  })
+})
+
+describe("rate-limit headers", () => {
+  test("an allowed request gets quota headers but no Retry-After", () => {
+    const headers = rateLimitHeaders({ limit: 20, ok: true, remaining: 7, resetSeconds: 30 })
+    expect(headers).toEqual({
+      "RateLimit-Limit": "20",
+      "RateLimit-Remaining": "7",
+      "RateLimit-Reset": "30",
+      "X-RateLimit-Limit": "20",
+      "X-RateLimit-Remaining": "7",
+      "X-RateLimit-Reset": "30",
+    })
+  })
+
+  test("a refusal adds Retry-After", () => {
+    const headers = rateLimitHeaders({ limit: 20, ok: false, remaining: 0, resetSeconds: 30 })
+    expect(headers["Retry-After"]).toBe("30")
+    expect(headers["RateLimit-Remaining"]).toBe("0")
   })
 })
 

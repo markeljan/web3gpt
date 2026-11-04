@@ -12,7 +12,7 @@ import { DEFAULT_AGENT_ID } from "@/lib/constants"
 import { getAgentById } from "@/lib/data/agents"
 import { getSkillChat, storeSkillChat } from "@/lib/data/kv"
 import { getCallerId } from "@/lib/deploy-limits"
-import { getClientIp, hitRateLimits, LIMITS, rateLimitHeaders } from "@/lib/rate-limit"
+import { getClientIp, hitRateLimits, LIMITS, RATE_LIMIT_HEADER_NAMES, rateLimitHeaders } from "@/lib/rate-limit"
 import type { SkillChat } from "@/lib/types"
 
 // See app/api/chat/route.ts: a deployment turn can take well over a minute.
@@ -22,7 +22,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Expose-Headers": "Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining",
+  "Access-Control-Expose-Headers": RATE_LIMIT_HEADER_NAMES.join(", "),
 }
 
 /** Roughly a large contract plus instructions; longer prompts are refused. */
@@ -151,6 +151,8 @@ async function handleSkillRequest(request: NextRequest) {
       { headers: rateLimitHeaders(limit), status: 429 }
     )
   }
+  // Every response from here on reports the remaining quota.
+  const headers = rateLimitHeaders(limit)
 
   const existingChat = await getSkillChat(chatId)
 
@@ -174,12 +176,15 @@ async function handleSkillRequest(request: NextRequest) {
       await storeSkillChat(session)
     }
 
-    return json({
-      agentId: activeAgentId,
-      chatId,
-      history: includeHistory ? toHistoryItems(session.messages) : undefined,
-      response: getLatestAssistantText(session.messages),
-    })
+    return json(
+      {
+        agentId: activeAgentId,
+        chatId,
+        history: includeHistory ? toHistoryItems(session.messages) : undefined,
+        response: getLatestAssistantText(session.messages),
+      },
+      { headers }
+    )
   }
 
   try {
@@ -208,12 +213,15 @@ async function handleSkillRequest(request: NextRequest) {
       title: buildChatTitle(nextMessages, "Skill Chat"),
     })
 
-    return json({
-      agentId: activeAgentId,
-      chatId,
-      history: includeHistory ? toHistoryItems(nextMessages) : undefined,
-      response: assistantText || null,
-    })
+    return json(
+      {
+        agentId: activeAgentId,
+        chatId,
+        history: includeHistory ? toHistoryItems(nextMessages) : undefined,
+        response: assistantText || null,
+      },
+      { headers }
+    )
   } catch (error) {
     // Log the detail server-side; provider and RPC errors can carry internals.
     console.error("skill request failed", { chatId, error })
@@ -224,7 +232,7 @@ async function handleSkillRequest(request: NextRequest) {
         code: "internal_error",
         error: "Failed to complete skill request",
       },
-      { status: 500 }
+      { headers, status: 500 }
     )
   }
 }
