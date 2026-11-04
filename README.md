@@ -159,11 +159,20 @@ variables above in the Vercel project.
 
 ## Development
 
+Install dependencies and run the local checks:
+
+```bash
+bun install
+bun run lint
+bun run typecheck
+bun run test
+```
+
+Pull requests should pass all three checks, as CI does. `bun run test` uses
+`bun test --isolate` to prevent test mocks from leaking between files.
+
 ```bash
 bun dev              # dev server on :3000
-bun run typecheck    # TypeScript
-bun run test         # unit tests (bun test --isolate)
-bun run lint         # Ultracite/Biome; zero warnings
 bun run format       # auto-fix formatting and lint
 bun run build        # production build
 ```
