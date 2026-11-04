@@ -119,5 +119,5 @@ Every error is JSON: `{ "code": "...", "error": "..." }`, plus `chatId` when one
 ## Reference
 
 - OpenAPI: `https://w3gpt.ai/api-docs`
-- Browser app: `https://w3gpt.ai`
+- Browser app: `https://w3gpt.ai` (send `Accept: text/markdown` to get this guide instead)
 - Source: `https://github.com/markeljan/web3gpt`
