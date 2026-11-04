@@ -143,7 +143,7 @@
       },
       "ErrorResponse": {
         "type": "object",
-        "required": ["error"],
+        "required": ["code", "error"],
         "properties": {
           "agentId": {
             "type": "string"
@@ -151,8 +151,22 @@
           "chatId": {
             "type": "string"
           },
+          "code": {
+            "type": "string",
+            "description": "Stable, machine-readable error code. Branch on this, not on the message.",
+            "enum": [
+              "invalid_body",
+              "invalid_chat_id",
+              "agent_not_found",
+              "message_too_long",
+              "rate_limited",
+              "not_found",
+              "internal_error"
+            ]
+          },
           "error": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable explanation of what went wrong."
           }
         }
       }
@@ -216,7 +230,17 @@
             }
           },
           "400": {
-            "description": "Invalid chatId",
+            "description": "Invalid chatId (invalid_chat_id) or a POST body that is not a JSON object (invalid_body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "agentId names no agent (agent_not_found)",
             "content": {
               "application/json": {
                 "schema": {
@@ -300,7 +324,17 @@
             }
           },
           "400": {
-            "description": "Invalid chatId",
+            "description": "Invalid chatId (invalid_chat_id) or a POST body that is not a JSON object (invalid_body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "agentId names no agent (agent_not_found)",
             "content": {
               "application/json": {
                 "schema": {

@@ -42,7 +42,7 @@ Pass these as JSON body fields (`POST`) or query parameters.
 | --- | --- |
 | `chatId` | Continue this conversation. 1–64 characters of `A-Z a-z 0-9 _ -`. Omit it to start a new chat. |
 | `message` | Your message (alias: `prompt`). Up to 50,000 characters. Omit it to just create or read a chat. |
-| `agentId` | Use a different Web3GPT agent for a new chat (e.g. a custom agent from `w3gpt.ai/?a=<agentId>`). Ignored for existing chats. |
+| `agentId` | Use a different Web3GPT agent for a new chat (e.g. a custom agent from `w3gpt.ai/?a=<agentId>`). An unknown id is a `404`. Ignored for existing chats. |
 | `history` | `true` to include the whole conversation as `history: [{ id, role, text }]` (alias: `full`). |
 
 ## Response
@@ -53,7 +53,8 @@ Pass these as JSON body fields (`POST`) or query parameters.
 | `agentId` | The agent serving this chat. |
 | `response` | The agent's latest reply as text, or `null` if there isn't one yet. |
 | `history` | Present when `history=true`. |
-| `error` | Present on failure, with a non-2xx status. |
+| `error` | Present on failure, with a non-2xx status: a human-readable message. |
+| `code` | Present on failure: a stable error code (see below). |
 
 ## Deploying contracts
 
@@ -100,12 +101,17 @@ The endpoint is public, so usage is metered:
 
 ## Errors
 
-| Status | Meaning |
-| --- | --- |
-| `400` | Invalid `chatId` |
-| `413` | `message` longer than 50,000 characters |
-| `429` | Rate limited; see `Retry-After` |
-| `500` | The agent failed to answer. If you had asked for a deployment, check `https://w3gpt.ai/contracts` (or ask in the same chat) before retrying, so you don't deploy twice. |
+Every error is JSON: `{ "code": "...", "error": "..." }`, plus `chatId` when one is known.
+
+| Status | `code` | Meaning |
+| --- | --- | --- |
+| `400` | `invalid_body` | The `POST` body is not a JSON object |
+| `400` | `invalid_chat_id` | Invalid `chatId` |
+| `404` | `agent_not_found` | `agentId` names no agent |
+| `404` | `not_found` | No API route at that path |
+| `413` | `message_too_long` | `message` longer than 50,000 characters |
+| `429` | `rate_limited` | Rate limited; see `Retry-After` |
+| `500` | `internal_error` | The agent failed to answer. If you had asked for a deployment, check `https://w3gpt.ai/contracts` (or ask in the same chat) before retrying, so you don't deploy twice. |
 
 ## Reference
 
