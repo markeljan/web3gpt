@@ -109,6 +109,7 @@ The endpoint is public, so usage is metered:
 
 ## Reference
 
+- Overview for agents: `https://w3gpt.ai/llms.txt`
 - OpenAPI: `https://w3gpt.ai/api-docs`
 - Browser app: `https://w3gpt.ai`
 - Source: `https://github.com/markeljan/web3gpt`
