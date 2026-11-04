@@ -78,6 +78,14 @@ export async function SidebarContent() {
             />
           </div>
         )}
+        <nav className="mt-3 flex justify-center gap-4 text-muted-foreground text-xs">
+          <a className="hover:text-foreground" href="/about">
+            About
+          </a>
+          <a className="hover:text-foreground" href="/privacy">
+            Privacy
+          </a>
+        </nav>
       </div>
     </div>
   )
