@@ -159,6 +159,17 @@ variables above in the Vercel project.
 
 ## Development
 
+Install dependencies and run the local checks:
+
+```bash
+bun install
+bun run lint
+bun run typecheck
+bun test
+```
+
+Pull requests should pass all three checks: lint, typecheck and tests.
+
 ```bash
 bun dev              # dev server on :3000
 bun run typecheck    # TypeScript
