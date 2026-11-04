@@ -36,6 +36,16 @@ const config: NextConfig = {
   },
   async rewrites() {
     return [
+      // Versioned paths for the public API (see "Versioning" in public/openapi.json).
+      // /api/v2 is the current major version; the unversioned path is its alias.
+      {
+        destination: "/api/skill",
+        source: "/api/v2/skill",
+      },
+      {
+        destination: "/api/stats",
+        source: "/api/v2/stats",
+      },
       {
         destination: "/api/api-docs",
         source: "/api-docs",
