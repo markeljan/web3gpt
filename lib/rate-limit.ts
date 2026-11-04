@@ -77,22 +77,29 @@ export async function hitRateLimit(
   }
 }
 
-/** Checks several rules in order and stops at the first one that is exceeded. */
+/**
+ * Checks several rules in order and stops at the first one that is exceeded.
+ * When all pass, returns the one with the least room left, so headers built from
+ * the result describe the limit the caller will hit first.
+ */
 export async function hitRateLimits(
   checks: { rule: RateLimitRule; id: string }[],
   options?: Parameters<typeof hitRateLimit>[2]
 ): Promise<RateLimitResult & { bucket?: string }> {
-  let last: RateLimitResult = { limit: 0, ok: true, remaining: 0, resetSeconds: 0 }
+  let tightest: (RateLimitResult & { bucket?: string }) | undefined
   for (const { rule, id } of checks) {
     // Sequential on purpose: a request refused by an earlier rule must not use up
     // the later ones.
     // biome-ignore lint/performance/noAwaitInLoops: order matters, see above
-    last = await hitRateLimit(rule, id, options)
-    if (!last.ok) {
-      return { ...last, bucket: rule.bucket }
+    const result = await hitRateLimit(rule, id, options)
+    if (!result.ok) {
+      return { ...result, bucket: rule.bucket }
+    }
+    if (!tightest || result.remaining < tightest.remaining) {
+      tightest = { ...result, bucket: rule.bucket }
     }
   }
-  return last
+  return tightest ?? { limit: 0, ok: true, remaining: 0, resetSeconds: 0 }
 }
 
 /**
@@ -107,11 +114,36 @@ export const getClientIp = (headers: Headers): string => {
   return vercel || realIp || forwarded || "unknown"
 }
 
-export const rateLimitHeaders = (result: RateLimitResult): Record<string, string> => ({
-  "Retry-After": String(result.resetSeconds),
-  "X-RateLimit-Limit": String(result.limit),
-  "X-RateLimit-Remaining": String(result.remaining),
-})
+/**
+ * Rate-limit headers for any response, so callers can throttle before they are
+ * refused. `RateLimit-*` follows the IETF draft; `X-RateLimit-*` is kept for
+ * existing clients. `Retry-After` is only sent with a refusal.
+ */
+export const rateLimitHeaders = (result: RateLimitResult): Record<string, string> => {
+  const limit = String(result.limit)
+  const remaining = String(result.remaining)
+  const reset = String(result.resetSeconds)
+  return {
+    "RateLimit-Limit": limit,
+    "RateLimit-Remaining": remaining,
+    "RateLimit-Reset": reset,
+    "X-RateLimit-Limit": limit,
+    "X-RateLimit-Remaining": remaining,
+    "X-RateLimit-Reset": reset,
+    ...(result.ok ? {} : { "Retry-After": reset }),
+  }
+}
+
+/** Every header `rateLimitHeaders` can send, for `Access-Control-Expose-Headers`. */
+export const RATE_LIMIT_HEADER_NAMES = [
+  "RateLimit-Limit",
+  "RateLimit-Remaining",
+  "RateLimit-Reset",
+  "Retry-After",
+  "X-RateLimit-Limit",
+  "X-RateLimit-Remaining",
+  "X-RateLimit-Reset",
+]
 
 // ---------------------------------------------------------------------------
 // Limits. Request limits guard the OpenAI bill and server CPU; deployment limits
