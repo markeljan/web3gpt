@@ -4,7 +4,8 @@ Web3GPT is a smart-contract agent. Through this HTTP API you can hold a conversa
 it can write Solidity contracts, compile them, deploy them to EVM chains, and resolve ENS and
 Unstoppable Domains names. No account or API key is needed.
 
-Endpoint: `https://w3gpt.ai/api/skill` (`GET` or `POST`; CORS is open)
+Endpoint: `https://w3gpt.ai/api/skill` (`GET` or `POST`; CORS is open). Pin
+`https://w3gpt.ai/api/v2/skill` to stay on the current version (see [Versioning](#versioning)).
 
 ## Quick start
 
@@ -106,6 +107,15 @@ The endpoint is public, so usage is metered:
 | `413` | `message` longer than 50,000 characters |
 | `429` | Rate limited; see `Retry-After` |
 | `500` | The agent failed to answer. If you had asked for a deployment, check `https://w3gpt.ai/contracts` (or ask in the same chat) before retrying, so you don't deploy twice. |
+
+## Versioning
+
+- `/api/v2/skill` is the current major version. `/api/skill` is an alias for whichever version
+  is current, so pin `/api/v2` if you can't absorb breaking changes.
+- Within a version, changes are additive: new optional parameters, response fields or error
+  codes. Ignore fields you don't know. Breaking changes ship under a new path (`/api/v3`).
+- Before a version or operation is removed, its responses carry a `Deprecation` header and a
+  `Sunset` header with the removal date, at least 90 days ahead. Changes are noted here.
 
 ## Reference
 

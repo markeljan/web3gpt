@@ -2,13 +2,17 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Web3GPT Skill API",
-    "description": "Simple agent-first chat API for Web3GPT. Start a chat with no params, then continue with the returned chatId.",
+    "description": "Simple agent-first chat API for Web3GPT. Start a chat with no params, then continue with the returned chatId.\n\n## Versioning\n\nThe API is versioned in the URL path. `/api/v2` is the current major version; `/api` is an alias for it. Pin `/api/v2` to stay on this version. Within a major version, changes are additive only: new optional parameters, new response fields, new error codes. Breaking changes ship under a new path (`/api/v3`).\n\n## Deprecation\n\nWhen a version or operation is scheduled for removal, its responses carry a `Deprecation` header (RFC 9745) and a `Sunset` header (RFC 8594) with the removal date, and the change is listed in the skill guide (https://w3gpt.ai/skill.md). A deprecated version keeps working for at least 90 days after the `Deprecation` header first appears.",
     "version": "2.1.0"
   },
   "servers": [
     {
+      "url": "/api/v2",
+      "description": "Web3GPT API, major version 2 (pinned)"
+    },
+    {
       "url": "/api",
-      "description": "Web3GPT API"
+      "description": "Web3GPT API, alias for the current major version"
     }
   ],
   "components": {
@@ -161,6 +165,7 @@
   "paths": {
     "/skill": {
       "get": {
+        "operationId": "getSkillChat",
         "summary": "Start or inspect a skill chat",
         "description": "Call with no parameters to create a new chat and receive a chatId. Pass chatId to inspect an existing chat. Add history=true or full=true to receive the full simplified message history.",
         "parameters": [
@@ -276,6 +281,7 @@
         }
       },
       "post": {
+        "operationId": "sendSkillMessage",
         "summary": "Continue a skill chat",
         "description": "Send a message to the agent. If chatId is omitted, a new chat is created automatically. The response always includes the chatId so you can keep using the same thread.",
         "requestBody": {
@@ -360,7 +366,9 @@
         }
       },
       "options": {
+        "operationId": "skillPreflight",
         "summary": "CORS preflight",
+        "description": "Browser CORS preflight. Agents never need to call this.",
         "responses": {
           "200": {
             "description": "CORS headers"
@@ -370,6 +378,7 @@
     },
     "/stats": {
       "get": {
+        "operationId": "getPublicStats",
         "summary": "Read public aggregate stats",
         "description": "Returns timestamped custom-agent and deduplicated deployment-record counts, including per-chain mainnet/testnet labels and metric definitions.",
         "responses": {
