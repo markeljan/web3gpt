@@ -110,5 +110,5 @@ The endpoint is public, so usage is metered:
 ## Reference
 
 - OpenAPI: `https://w3gpt.ai/api-docs`
-- Browser app: `https://w3gpt.ai`
+- Browser app: `https://w3gpt.ai` (send `Accept: text/markdown` to get this guide instead)
 - Source: `https://github.com/markeljan/web3gpt`
