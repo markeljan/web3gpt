@@ -1,0 +1,41 @@
+# Web3GPT
+
+> Web3GPT is an AI agent that writes, compiles, deploys and verifies Solidity smart contracts on EVM chains. Agents use it over a public HTTP API with no account or API key. Web3GPT pays the gas for agent deployments.
+
+## When to use Web3GPT
+
+Use it when you need to:
+
+- Deploy a smart contract (ERC20, ERC721, ERC1155, a custom contract from source, or one described in plain English) and get back the address, transaction hash, explorer links and source/ABI on IPFS.
+- Compile Solidity with npm or GitHub imports (OpenZeppelin, solmate, forge-std), with the compiler version picked from the `pragma`.
+- Deploy to a testnet (Polygon Amoy, Sepolia, Base Sepolia, Arbitrum Sepolia, OP Sepolia, Mantle Sepolia, Metis Sepolia, Celo Sepolia) or to Polygon mainnet, without holding a funded wallet.
+- Resolve ENS or Unstoppable Domains names to addresses, and addresses back to names.
+- Iterate on a contract in conversation (change parameters, add features) before deploying it.
+
+Don't use it for:
+
+- Sending transactions from your own wallet, transferring tokens, or calling contracts after deployment. Over the API it only deploys.
+- Chains not listed in the skill guide, or more mainnet deployments than its limits allow (2 per caller per day).
+- Auditing contracts that hold real value. It writes and deploys code; it does not provide security audits.
+
+## How to call it
+
+1. `GET https://w3gpt.ai/api/skill` starts a chat. Keep the returned `chatId`; it is the only credential.
+2. `POST https://w3gpt.ai/api/skill?chatId=<chatId>` with `{"message": "..."}` sends a message and returns the agent's reply.
+3. The agent usually asks for confirmation before deploying. Reply in the same chat.
+
+## Docs
+
+- [Skill guide](https://w3gpt.ai/skill.md): full usage guide for agents (parameters, chains, limits, errors)
+- [OpenAPI spec](https://w3gpt.ai/openapi.json): machine-readable API description
+- [API reference](https://w3gpt.ai/api-docs): interactive API docs
+
+## Data
+
+- [Deployed contracts](https://w3gpt.ai/contracts): public list of recorded deployments
+- [Stats](https://w3gpt.ai/api/stats): deployment counts by chain, as JSON
+
+## Optional
+
+- [Source code](https://github.com/markeljan/web3gpt)
+- [Browser app](https://w3gpt.ai)

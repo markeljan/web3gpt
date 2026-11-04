@@ -73,6 +73,8 @@ Lefthook runs `bunx ultracite fix` on the staged JS/TS/JSON/CSS files before eac
   - `auth.ts` (server), `auth-client.ts` (browser)
 - `public/skill.md`, `public/openapi.json`: public API docs (keep both in sync with `api/skill`).
   `proxy.ts` serves `skill.md` for `/` when a client sends `Accept: text/markdown`.
+  `public/llms.txt` is the entry point that links to them; update it when chains, limits or
+  endpoints change.
 - `test/`: unit tests
 
 ## Invariants
