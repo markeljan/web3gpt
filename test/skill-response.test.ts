@@ -83,5 +83,9 @@ describe("/api/skill response text", () => {
     expect(model.doGenerateCalls).toHaveLength(5)
     expect(body.response).toBe("Looking those names up.")
     expect(saved[0].messages.at(-1)?.parts[0].text).toBe("Looking those names up.")
+    // Successful turns report the remaining quota so agents can throttle early.
+    expect(response.headers.get("RateLimit-Remaining")).not.toBeNull()
+    expect(Number(response.headers.get("RateLimit-Remaining"))).toBeGreaterThanOrEqual(0)
+    expect(response.headers.get("Retry-After")).toBeNull()
   })
 })
