@@ -6,7 +6,8 @@ mock.module("server-only", () => ({}))
 const { createRedisClient, redis, resolveRedisCredentials } = await import("@/lib/redis")
 
 const UPSTASH = { UPSTASH_REDIS_REST_TOKEN: "upstash-token", UPSTASH_REDIS_REST_URL: "https://upstash.example" }
-const MISSING_CREDENTIALS = /UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.*KV_REST_API_URL and KV_REST_API_TOKEN/
+const MISSING_CREDENTIALS =
+  /UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN.*KV_REST_API_URL and KV_REST_API_TOKEN/u
 const KV = { KV_REST_API_TOKEN: "kv-token", KV_REST_API_URL: "https://kv.example" }
 
 describe("resolveRedisCredentials", () => {

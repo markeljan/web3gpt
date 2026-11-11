@@ -53,7 +53,7 @@ const COMMUNITY_LINKS = [
   { href: "https://github.com/markeljan/web3gpt", icon: IconGitHub, label: "GitHub" },
 ] as const
 
-const WHITESPACE = /\s+/
+const WHITESPACE = /\s+/u
 
 const getUserInitials = (name: string) => {
   const [first = "", last] = name.trim().split(WHITESPACE)
@@ -78,7 +78,7 @@ function UserAvatar({ user, className }: { user: AuthUser; className?: string })
     return (
       <Image
         alt=""
-        className={cn("size-8 shrink-0 select-none rounded-full ring-1 ring-border", className)}
+        className={cn("ring-border size-8 shrink-0 rounded-full ring-1 select-none", className)}
         height={32}
         src={getAvatarUrl(user.image, 64)}
         width={32}
@@ -89,7 +89,7 @@ function UserAvatar({ user, className }: { user: AuthUser; className?: string })
     <span
       aria-hidden
       className={cn(
-        "flex size-8 shrink-0 select-none items-center justify-center rounded-full bg-muted font-medium text-muted-foreground text-xs",
+        "bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-medium select-none",
         className
       )}
     >
@@ -187,15 +187,15 @@ export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
     ) : (
       <Button
         aria-label={`Account menu for ${user.name}`}
-        className="h-auto w-full justify-start gap-3 p-3 text-left font-normal hover:bg-accent/60 data-[state=open]:bg-accent/60"
+        className="hover:bg-accent/60 data-[state=open]:bg-accent/60 h-auto w-full justify-start gap-3 p-3 text-left font-normal"
         variant="ghost"
       >
         <UserAvatar user={user} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-sm">{user.name}</span>
-          <span className="block truncate text-muted-foreground text-xs">{user.email}</span>
+          <span className="block truncate text-sm font-medium">{user.name}</span>
+          <span className="text-muted-foreground block truncate text-xs">{user.email}</span>
         </span>
-        <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        <ChevronsUpDown aria-hidden className="text-muted-foreground size-4 shrink-0" />
       </Button>
     )
 
@@ -222,13 +222,13 @@ export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
           <DropdownMenuLabel className="flex items-center gap-3 font-normal">
             <UserAvatar user={user} />
             <span className="min-w-0">
-              <span className="block truncate font-medium text-sm">{user.name}</span>
-              <span className="block truncate text-muted-foreground text-xs">{user.email}</span>
+              <span className="block truncate text-sm font-medium">{user.name}</span>
+              <span className="text-muted-foreground block truncate text-xs">{user.email}</span>
             </span>
           </DropdownMenuLabel>
 
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="py-1 font-medium text-muted-foreground text-xs">Theme</DropdownMenuLabel>
+          <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">Theme</DropdownMenuLabel>
           <DropdownMenuRadioGroup onValueChange={setTheme} value={theme}>
             {THEMES.map(({ icon: Icon, label, value }) => (
               // Keep the menu open so the change can be previewed.
@@ -304,7 +304,7 @@ export function UserMenu({ user, variant = "sidebar" }: UserMenuProps) {
             </AlertDialogHeader>
             <div className="grid gap-2">
               <label className="text-sm" htmlFor="delete-history-confirmation">
-                Type <span className="select-all font-mono font-semibold">{DELETE_CONFIRMATION}</span> to confirm.
+                Type <span className="font-mono font-semibold select-all">{DELETE_CONFIRMATION}</span> to confirm.
               </label>
               <Input
                 autoCapitalize="characters"

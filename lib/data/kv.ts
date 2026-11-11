@@ -214,13 +214,13 @@ export const getVerifications = async (): Promise<VerificationScanResult> => {
 
     if (keys && keys.length > 0) {
       const batchResults = await readHashes<Record<string, unknown>>(keys)
-      batchResults.forEach((read, index) => {
+      for (const [index, read] of batchResults.entries()) {
         if (!read.ok) {
           unreadable += 1
         } else if (read.value) {
           entries.push({ data: read.value, key: keys[index] })
         }
-      })
+      }
     }
   } while (cursor !== 0)
 

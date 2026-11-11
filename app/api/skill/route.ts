@@ -27,7 +27,7 @@ const CORS_HEADERS = {
 
 /** Roughly a large contract plus instructions; longer prompts are refused. */
 const MAX_MESSAGE_CHARS = 50_000
-const CHAT_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/
+const CHAT_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/u
 
 type SkillRequest = {
   agentId?: string

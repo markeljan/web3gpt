@@ -14,7 +14,7 @@ type LogoTextProps = LogoProps & {
 export const CustomLogoText = ({ className, variant = "default", children }: LogoTextProps) => (
   <span
     className={cn(
-      "font-normal text-gray-600 text-sm tracking-tight dark:text-gray-400",
+      "text-sm font-normal tracking-tight text-gray-600 dark:text-gray-400",
       variant === "mobile" && "text-base",
       variant === "large" && "text-xl",
       variant === "xl" && "text-2xl",
@@ -29,7 +29,7 @@ export function W3GPTLogo({ className, variant = "default" }: LogoProps) {
   return (
     <Link
       className={cn(
-        "flex items-center gap-2 font-bold text-lg tracking-tight transition-opacity hover:opacity-80",
+        "flex items-center gap-2 text-lg font-bold tracking-tight transition-opacity hover:opacity-80",
         variant === "mobile" && "text-xl",
         variant === "large" && "text-2xl",
         variant === "xl" && "text-3xl",

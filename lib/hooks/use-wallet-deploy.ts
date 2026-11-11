@@ -67,7 +67,7 @@ export function useWalletDeploy() {
         const { abi = [], artifactId, bytecode, standardJsonInput } = prepareResult
 
         const parsedConstructorArgs = constructorArgs.map((arg) => {
-          if (arg.startsWith("[") && arg.endsWith("]") && arg.match(/(?<=\[)(?=[^"'])(.*)(?<=[^"'])(?=\])/g)) {
+          if (arg.startsWith("[") && arg.endsWith("]") && /(?<=\[)(?=[^"'])(?:.*)(?<=[^"'])(?=\])/gu.test(arg)) {
             return arg
               .slice(1, -1)
               .split(",")

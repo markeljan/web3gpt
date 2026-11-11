@@ -30,7 +30,7 @@ export async function SidebarContent() {
       {/* Agents Section */}
       <div className="shrink-0 p-6 py-2">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="pointer-events-none select-none font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+          <h3 className="text-muted-foreground pointer-events-none text-xs font-semibold tracking-wider uppercase select-none">
             Agents
           </h3>
         </div>
@@ -44,7 +44,7 @@ export async function SidebarContent() {
       {/* Chat History Section - Scrollable */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-2">
         <div className="mb-3 flex shrink-0 items-center justify-between px-2">
-          <h3 className="pointer-events-none select-none font-semibold text-muted-foreground text-xs uppercase tracking-wider">
+          <h3 className="text-muted-foreground pointer-events-none text-xs font-semibold tracking-wider uppercase select-none">
             Chats
           </h3>
         </div>
@@ -65,11 +65,11 @@ export async function SidebarContent() {
       {/* User Section - Bottom */}
       <div className="shrink-0 p-4">
         {user ? (
-          <div className="overflow-hidden rounded-lg border bg-muted/50">
+          <div className="bg-muted/50 overflow-hidden rounded-lg border">
             <UserMenu user={user} variant="sidebar" />
           </div>
         ) : (
-          <div className="rounded-lg border bg-muted/50 p-3">
+          <div className="bg-muted/50 rounded-lg border p-3">
             <LoginButton
               className="w-full justify-start"
               showGithubIcon={true}
@@ -78,7 +78,7 @@ export async function SidebarContent() {
             />
           </div>
         )}
-        <nav className="mt-3 flex justify-center gap-4 text-muted-foreground text-xs">
+        <nav className="text-muted-foreground mt-3 flex justify-center gap-4 text-xs">
           <a className="hover:text-foreground" href="/about">
             About
           </a>

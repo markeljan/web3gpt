@@ -17,17 +17,17 @@ export type ChatPanelProps = {
 
 export function ChatPanel({ isLoading, isEmpty, error, onSubmit, onRetry, stop, onNewChat }: ChatPanelProps) {
   return (
-    <div className="relative shrink-0 bg-background">
+    <div className="bg-background relative shrink-0">
       {/* Fades the last line of the transcript into the composer instead of cutting it off. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-10 h-10 bg-linear-to-t from-background to-transparent"
+        className="from-background pointer-events-none absolute inset-x-0 -top-10 h-10 bg-linear-to-t to-transparent"
       />
       <ButtonScrollToBottom />
       <div className="mx-auto w-full max-w-3xl px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {error ? (
           <div
-            className="mb-2 flex items-center gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-destructive text-sm"
+            className="border-destructive/40 bg-destructive/10 text-destructive mb-2 flex items-center gap-3 rounded-xl border px-3 py-2 text-sm"
             role="alert"
           >
             <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
@@ -39,7 +39,7 @@ export function ChatPanel({ isLoading, isEmpty, error, onSubmit, onRetry, stop, 
           </div>
         ) : null}
         <PromptForm isEmpty={isEmpty} isLoading={isLoading} onNewChat={onNewChat} onSubmit={onSubmit} stop={stop} />
-        <p className="mt-2 text-center text-[11px] text-muted-foreground">
+        <p className="text-muted-foreground mt-2 text-center text-[11px]">
           Web3GPT can make mistakes. Review contracts before deploying.
         </p>
       </div>

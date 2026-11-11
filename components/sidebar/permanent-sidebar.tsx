@@ -23,7 +23,7 @@ export function PermanentSidebar({ children, className, user }: PermanentSidebar
   return (
     <div
       className={cn(
-        "relative hidden h-full flex-col border-border border-r bg-muted/20 transition-all duration-300 ease-in-out lg:flex",
+        "border-border bg-muted/20 relative hidden h-full flex-col border-r transition-all duration-300 ease-in-out lg:flex",
         isCollapsed ? "w-16" : "w-80",
         className
       )}
@@ -31,7 +31,7 @@ export function PermanentSidebar({ children, className, user }: PermanentSidebar
       {/* Collapse Toggle */}
       <Button
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        className="absolute top-6 -right-3 z-10 h-6 w-6 rounded-full border bg-background shadow-md hover:bg-accent"
+        className="bg-background hover:bg-accent absolute top-6 -right-3 z-10 h-6 w-6 rounded-full border shadow-md"
         onClick={() => setIsCollapsed(!isCollapsed)}
         size="sm"
         variant="ghost"

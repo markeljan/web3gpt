@@ -1,6 +1,6 @@
 import { maskComments } from "@/lib/solidity/source-text"
 
-const LOCAL_IMPORT_REGEX = /^\.\//
+const LOCAL_IMPORT_REGEX = /^\.\//u
 const OPENZEPPELIN_IMPORT_FALLBACKS: Record<string, string[]> = {
   "@openzeppelin/contracts/security/Pausable.sol": ["@openzeppelin/contracts/utils/Pausable.sol"],
   "@openzeppelin/contracts/security/PullPayment.sol": ["@openzeppelin/contracts/utils/PullPayment.sol"],
@@ -20,7 +20,7 @@ const OPENZEPPELIN_IMPORT_FALLBACKS: Record<string, string[]> = {
 // ---------------------------------------------------------------------------
 
 const IMPORT_REGEX =
-  /\bimport\s*(?:(?:\{[^}]*\}|\*\s*as\s+[A-Za-z_$][\w$]*)\s*from\s*)?(["'])([^"'\r\n]+)\1(?:\s*as\s+[A-Za-z_$][\w$]*)?\s*;/dg
+  /\bimport\s*(?:(?:\{[^}]*\}|\*\s*as\s+[A-Za-z_$][\w$]*)\s*from\s*)?(?<part1>["'])(?<part2>[^"'\r\n]+)\1(?:\s*as\s+[A-Za-z_$][\w$]*)?\s*;/dgu
 
 export type ImportStatement = {
   path: string
@@ -222,10 +222,10 @@ function resolveImportPath(importPath: string, sourcePath: string) {
 // First segment of an npm package path such as "solmate/src/tokens/ERC20.sol"
 // or "forge-std/Test.sol": a lowercase package name with no dots (so it can't
 // be a host name), followed by a path inside the package.
-const BARE_PACKAGE_IMPORT = /^[a-z0-9][a-z0-9_-]{0,213}\/[^/]/
+const BARE_PACKAGE_IMPORT = /^[a-z0-9][a-z0-9_-]{0,213}\/[^/]/u
 
-const GITHUB_BLOB_URL = /^(?:https:\/\/)?(?:www\.)?github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/
-const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i
+const GITHUB_BLOB_URL = /^(?:https:\/\/)?(?:www\.)?github\.com\/(?<part1>[^/]+)\/(?<part2>[^/]+)\/blob\/(?<part3>.+)$/u
+const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//iu
 
 export function getImportUrl(importPath: string, sourcePath?: string) {
   let urlToFetch: string
@@ -265,7 +265,7 @@ function getImportFallbacks(importPath: string) {
   return []
 }
 
-const CONTRACT_NAME_REGEX = /[/\\:*?"<>|.\s]+$/g
+const CONTRACT_NAME_REGEX = /[/\\:*?"<>|.\s]+$/gu
 
 export const getContractFileName = (contractName: string): string =>
   `${contractName.replace(CONTRACT_NAME_REGEX, "_")}.sol`
