@@ -2,7 +2,7 @@
 // agree on what a valid address is.
 
 export const MAX_EMAIL_LENGTH = 254
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u
 const GITHUB_NOREPLY_SUFFIX = "@users.noreply.github.com"
 
 export const normalizeEmail = (email: string): string => email.trim().toLowerCase()

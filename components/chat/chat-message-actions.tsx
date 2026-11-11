@@ -55,7 +55,7 @@ export function ChatMessageActions({ message, className, ...props }: ChatMessage
       className={cn(
         // Always visible on touch devices, revealed on hover/focus on pointer devices.
         "flex items-center gap-1 transition-opacity duration-150",
-        "md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+        "md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100",
         className
       )}
       {...props}
@@ -64,7 +64,7 @@ export function ChatMessageActions({ message, className, ...props }: ChatMessage
         <TooltipTrigger asChild>
           <Button
             aria-label={isCopied ? "Copied to clipboard" : "Copy message"}
-            className="size-8 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground size-8"
             onClick={() => copyToClipboard(messageText)}
             size="icon"
             variant="ghost"

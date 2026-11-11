@@ -46,9 +46,9 @@ export default async function SharePage({ params, searchParams }: NextPageProps)
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <div className="border-b bg-background px-4 py-6 md:py-8">
+      <div className="bg-background border-b px-4 py-6 md:py-8">
         <div className="mx-auto w-full max-w-3xl space-y-1">
-          <h1 className="font-bold text-2xl">{title}</h1>
+          <h1 className="text-2xl font-bold">{title}</h1>
           <div className="text-muted-foreground text-sm">
             {formatDate(createdAt)} · {messages.length} messages
           </div>

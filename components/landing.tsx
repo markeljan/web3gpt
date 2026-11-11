@@ -12,7 +12,7 @@ type LandingProps = {
 export function Landing({ userId, disableAnimations }: LandingProps) {
   return (
     <>
-      <div className="pointer-events-none mx-auto mb-4 flex max-w-2xl select-none flex-col p-4 py-8 text-center">
+      <div className="pointer-events-none mx-auto mb-4 flex max-w-2xl flex-col p-4 py-8 text-center select-none">
         <div className="mb-6 flex items-center justify-center gap-3 max-sm:flex-col">
           <W3GPTLogo variant="xl" />
           <CustomLogoText variant="xl">Ready, Set, Deploy</CustomLogoText>
@@ -30,8 +30,8 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
               speed={0.5}
             />
             <div className="text-left">
-              <h3 className="font-medium text-sm">Generate</h3>
-              <p className="text-gray-600 text-xs dark:text-gray-400">Prompt smart contracts</p>
+              <h3 className="text-sm font-medium">Generate</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Prompt smart contracts</p>
             </div>
           </div>
 
@@ -44,8 +44,8 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
               speed={0.5}
             />
             <div className="text-left">
-              <h3 className="font-medium text-sm">Speed up</h3>
-              <p className="text-gray-600 text-xs dark:text-gray-400">Skip the boilerplate</p>
+              <h3 className="text-sm font-medium">Speed up</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Skip the boilerplate</p>
             </div>
           </div>
 
@@ -59,8 +59,8 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
               speed={0.5}
             />
             <div className="text-left">
-              <h3 className="font-medium text-sm">Deploy</h3>
-              <p className="text-gray-600 text-xs dark:text-gray-400">Directly from chat</p>
+              <h3 className="text-sm font-medium">Deploy</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400">Directly from chat</p>
             </div>
           </div>
         </div>

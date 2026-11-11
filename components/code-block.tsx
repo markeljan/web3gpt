@@ -162,13 +162,13 @@ export const CodeBlock = memo(({ language, isStreaming = false, value }: CodeBlo
   }, [isStreaming, normalizedLanguage, value])
 
   return (
-    <div className="relative w-full bg-muted/95 font-sans dark:bg-muted/50">
-      <div className="flex w-full items-center justify-between border-b bg-secondary-foreground/40 px-6 py-3 pr-4 dark:bg-secondary-foreground/10">
-        <span className="text-xs lowercase dark:text-secondary-foreground">{languageLabel}</span>
+    <div className="bg-muted/95 dark:bg-muted/50 relative w-full font-sans">
+      <div className="bg-secondary-foreground/40 dark:bg-secondary-foreground/10 flex w-full items-center justify-between border-b px-6 py-3 pr-4">
+        <span className="dark:text-secondary-foreground text-xs lowercase">{languageLabel}</span>
         <div className="flex items-center space-x-1">
           {renderDeployButton()}
           <Button
-            className="focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
+            className="focus-visible:ring-ring focus-visible:ring-1 focus-visible:ring-offset-0"
             onClick={downloadAsFile}
             size="icon"
             variant="ghost"
@@ -177,7 +177,7 @@ export const CodeBlock = memo(({ language, isStreaming = false, value }: CodeBlo
             <span className="sr-only">Download</span>
           </Button>
           <Button
-            className="text-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
+            className="focus-visible:ring-ring text-xs focus-visible:ring-1 focus-visible:ring-offset-0"
             onClick={() => copyToClipboard(value)}
             size="icon"
             variant="ghost"

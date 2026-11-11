@@ -24,7 +24,7 @@ const PROJECT_GITHUB_CLIENT_ID = "Ov23liJPi5FEcJy6kRmj"
 // registered on localhost, so it points at the local origin and the proxy
 // short-circuits.
 // GitHub avatar URLs embed the same numeric profile id the account is keyed by.
-const GITHUB_AVATAR_ID = /avatars\.githubusercontent\.com\/u\/(\d+)/
+const GITHUB_AVATAR_ID = /avatars\.githubusercontent\.com\/u\/(?<part1>\d+)/u
 
 // Every KV key in this app is scoped by the GitHub numeric id that next-auth
 // used as `session.user.id`, so a user record must never be created without one.

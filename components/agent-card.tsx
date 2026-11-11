@@ -19,7 +19,7 @@ export const AgentCard = ({ agent, className, children }: AgentCardProps) => {
   return (
     <div
       className={cn(
-        "mx-auto mb-8 flex max-w-2xl items-start gap-4 rounded-lg border border-gray-600/20 bg-background/50 p-4 dark:border-gray-600/30",
+        "bg-background/50 mx-auto mb-8 flex max-w-2xl items-start gap-4 rounded-lg border border-gray-600/20 p-4 dark:border-gray-600/30",
         className
       )}
     >
@@ -34,21 +34,21 @@ export const AgentCard = ({ agent, className, children }: AgentCardProps) => {
         />
       </div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate font-semibold text-lg">{agent.name}</h3>
+        <h3 className="truncate text-lg font-semibold">{agent.name}</h3>
         <p
           className={cn(
-            "text-gray-600 text-sm dark:text-gray-400",
+            "text-sm text-gray-600 dark:text-gray-400",
             descriptionClamped ? "line-clamp-2" : "line-clamp-none"
           )}
         >
           <span>{agent.description}</span>
         </p>
-        <div className="flex w-full items-center justify-end gap-1 text-gray-500 text-xs hover:text-gray-600 dark:hover:text-gray-400">
+        <div className="flex w-full items-center justify-end gap-1 text-xs text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
           <button onClick={() => setDescriptionClamped(!descriptionClamped)} type="button">
             {descriptionClamped ? "Show more" : "Show less"}
           </button>
         </div>
-        <p className="mt-1 text-gray-500 text-xs">by {agent.creator}</p>
+        <p className="mt-1 text-xs text-gray-500">by {agent.creator}</p>
       </div>
       <div className="flex shrink-0 gap-1">
         {children}

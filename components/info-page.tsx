@@ -6,8 +6,8 @@ export function InfoPage({ children, title, updated }: { children: ReactNode; ti
     <div className="min-h-0 flex-1 overflow-y-auto">
       <article className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-12 text-sm leading-relaxed">
         <header>
-          <h1 className="font-semibold text-2xl">{title}</h1>
-          {updated ? <p className="mt-1 text-muted-foreground">Last updated {updated}</p> : null}
+          <h1 className="text-2xl font-semibold">{title}</h1>
+          {updated ? <p className="text-muted-foreground mt-1">Last updated {updated}</p> : null}
         </header>
         {children}
       </article>
@@ -18,7 +18,7 @@ export function InfoPage({ children, title, updated }: { children: ReactNode; ti
 export function InfoSection({ children, id, title }: { children: ReactNode; id?: string; title: string }) {
   return (
     <section className="flex flex-col gap-3" id={id}>
-      <h2 className="font-semibold text-lg">{title}</h2>
+      <h2 className="text-lg font-semibold">{title}</h2>
       {children}
     </section>
   )

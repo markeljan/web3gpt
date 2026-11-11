@@ -130,7 +130,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
                 <div className="flex min-w-0 flex-1 flex-col">
                   <Header />
                   {/* Routes own their own scroll container so chat can pin to the bottom. */}
-                  <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">{children}</main>
+                  <main className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
                 </div>
               </div>
               <Toaster

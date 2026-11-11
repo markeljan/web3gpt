@@ -2,6 +2,12 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import solc from "solc"
 import { findImports, prepareContractSources, resolveImports, rewriteImports } from "@/lib/solidity/utils"
 
+test("preserves import offsets after astral characters in comments", () => {
+  const source = '/* 😀 */ import "./A.sol";'
+  const plain = '         import "./A.sol";'
+  expect(findImports(source)).toEqual(findImports(plain))
+})
+
 const MULTILINE_IMPORT = `import {
   Ownable,
   Ownable as Owned

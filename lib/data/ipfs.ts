@@ -10,7 +10,7 @@ const PARENT_DIR_PREFIX = "../"
 // The SDK expects a bare gateway domain, while NEXT_PUBLIC_IPFS_GATEWAY carries the protocol
 // so it can be used directly when building public URLs in getIpfsUrl.
 const pinata = new PinataSDK({
-  pinataGateway: process.env.NEXT_PUBLIC_IPFS_GATEWAY?.replace(/^https?:\/\//, ""),
+  pinataGateway: process.env.NEXT_PUBLIC_IPFS_GATEWAY?.replace(/^https?:\/\//u, ""),
   pinataJwt: process.env.PINATA_JWT,
 })
 

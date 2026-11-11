@@ -221,16 +221,16 @@ export function ContractsDashboard({
   )
 
   return (
-    <div className="min-h-full bg-linear-to-br from-background to-muted">
+    <div className="from-background to-muted min-h-full bg-linear-to-br">
       <div className="container mx-auto max-w-7xl px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="font-bold text-3xl tracking-tight">Contract Deployments</h1>
-              <p className="mt-1 text-muted-foreground">{activeDescription}</p>
+              <h1 className="text-3xl font-bold tracking-tight">Contract Deployments</h1>
+              <p className="text-muted-foreground mt-1">{activeDescription}</p>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
               <Layers className="h-4 w-4" />
               <span>
                 {(() => {
@@ -253,12 +253,12 @@ export function ContractsDashboard({
           <Card className="group transition-all duration-200 hover:shadow-md">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-primary/10 p-2.5 transition-colors group-hover:bg-primary/15">
-                  <Layers className="h-4 w-4 text-primary" />
+                <div className="bg-primary/10 group-hover:bg-primary/15 rounded-lg p-2.5 transition-colors">
+                  <Layers className="text-primary h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">Active Chain</p>
-                  <p className="font-bold text-2xl">
+                  <p className="text-2xl font-bold">
                     {filters.selectedChain ? getChainById(filters.selectedChain)?.name : "All"}
                   </p>
                 </div>
@@ -269,14 +269,14 @@ export function ContractsDashboard({
           <Card className="group transition-all duration-200 hover:shadow-md">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-primary/10 p-2.5 transition-colors group-hover:bg-primary/15">
-                  <FolderGit className="h-4 w-4 text-primary" />
+                <div className="bg-primary/10 group-hover:bg-primary/15 rounded-lg p-2.5 transition-colors">
+                  <FolderGit className="text-primary h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">
                     {filters.activeCategory === "my-contracts" ? "Your" : "Total"} Contracts
                   </p>
-                  <p className="font-bold text-2xl">
+                  <p className="text-2xl font-bold">
                     {filters.activeCategory === "my-contracts"
                       ? deduplicatedUserDeployments.length
                       : deduplicatedAllDeployments.length}
@@ -289,12 +289,12 @@ export function ContractsDashboard({
           <Card className="group transition-all duration-200 hover:shadow-md">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-primary/10 p-2.5 transition-colors group-hover:bg-primary/15">
-                  <HashIcon className="h-4 w-4 text-primary" />
+                <div className="bg-primary/10 group-hover:bg-primary/15 rounded-lg p-2.5 transition-colors">
+                  <HashIcon className="text-primary h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-muted-foreground text-sm">Active Chains</p>
-                  <p className="font-bold text-2xl">
+                  <p className="text-2xl font-bold">
                     {filters.activeCategory === "rewards" ? 1 : Object.keys(deploymentsByChain).length}
                   </p>
                 </div>
@@ -316,7 +316,7 @@ export function ContractsDashboard({
                   return (
                     <Button
                       className={cn(
-                        "group h-10 justify-start px-3 font-medium text-xs transition-all",
+                        "group h-10 justify-start px-3 text-xs font-medium transition-all",
                         isActive && "shadow-xs"
                       )}
                       key={category.id}
@@ -347,7 +347,7 @@ export function ContractsDashboard({
             </div>
 
             {/* Divider */}
-            <div className="mx-4 mt-4 h-px bg-border" />
+            <div className="bg-border mx-4 mt-4 h-px" />
 
             {/* Chain Filters */}
             <div className="p-4">
@@ -355,12 +355,12 @@ export function ContractsDashboard({
                 {/* Filter Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium text-muted-foreground text-sm">Chain Filters</span>
+                    <Filter className="text-muted-foreground h-4 w-4" />
+                    <span className="text-muted-foreground text-sm font-medium">Chain Filters</span>
                   </div>
                   {filters.selectedChain !== null && (
                     <Button
-                      className="group h-5 px-2 text-xs transition-all hover:bg-destructive/10 hover:text-destructive"
+                      className="group hover:bg-destructive/10 hover:text-destructive h-5 px-2 text-xs transition-all"
                       onClick={clearFilters}
                       size="sm"
                       variant="ghost"
@@ -380,7 +380,7 @@ export function ContractsDashboard({
                     return (
                       <Button
                         className={cn(
-                          "group h-9 justify-start px-3 font-medium text-xs transition-all",
+                          "group h-9 justify-start px-3 text-xs font-medium transition-all",
                           isSelected && "shadow-xs",
                           isSelected && chainInfo.iconBackground,
                           !isSelected && "hover:border-primary/50"
@@ -458,14 +458,14 @@ export function ContractsDashboard({
                           >
                             <div className="flex min-w-0 items-center gap-3">
                               <div className="flex items-center gap-2">
-                                <span className="w-7 text-center font-mono font-semibold text-muted-foreground text-sm">
+                                <span className="text-muted-foreground w-7 text-center font-mono text-sm font-semibold">
                                   #{index + 1}
                                 </span>
                                 <LeaderboardIcon index={index} />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
-                                  <p className="truncate font-medium font-mono text-sm">{deployment.contractAddress}</p>
+                                  <p className="truncate font-mono text-sm font-medium">{deployment.contractAddress}</p>
                                   {addressUrl ? (
                                     <Link
                                       className="opacity-0 transition-opacity group-hover:opacity-100"
@@ -473,7 +473,7 @@ export function ContractsDashboard({
                                       rel="noopener noreferrer"
                                       target="_blank"
                                     >
-                                      <ExternalLink className="h-3 w-3 text-muted-foreground hover:text-primary" />
+                                      <ExternalLink className="text-muted-foreground hover:text-primary h-3 w-3" />
                                     </Link>
                                   ) : null}
                                 </div>
@@ -494,7 +494,7 @@ export function ContractsDashboard({
                         )
                       })
                     ) : (
-                      <div className="py-12 text-center text-muted-foreground">
+                      <div className="text-muted-foreground py-12 text-center">
                         <Trophy className="mx-auto mb-3 h-8 w-8 opacity-50" />
                         <p className="font-medium">No deployments found</p>
                         <p className="mt-1 text-sm">
@@ -526,7 +526,7 @@ export function ContractsDashboard({
                       )}
                       key={`card-${chain.id}`}
                     >
-                      <div className="absolute inset-0 bg-linear-to-br from-transparent via-transparent to-primary/5" />
+                      <div className="to-primary/5 absolute inset-0 bg-linear-to-br from-transparent via-transparent" />
                       <CardHeader className="relative pb-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
@@ -535,12 +535,12 @@ export function ContractsDashboard({
                             </div>
                             <div>
                               <CardTitle className="text-lg">{chain.name}</CardTitle>
-                              <p className="mt-0.5 text-muted-foreground text-xs">
+                              <p className="text-muted-foreground mt-0.5 text-xs">
                                 {hasDeployments ? `${deploymentCount} deployments` : "No deployments yet"}
                               </p>
                             </div>
                           </div>
-                          <Gift className="h-5 w-5 text-muted-foreground/50" />
+                          <Gift className="text-muted-foreground/50 h-5 w-5" />
                         </div>
                       </CardHeader>
                       <CardContent className="relative space-y-3">
@@ -593,13 +593,13 @@ export function ContractsDashboard({
 
                     return (
                       <Card
-                        className="group border-0 bg-card shadow-xs transition-all duration-200 hover:shadow-lg"
+                        className="group bg-card border-0 shadow-xs transition-all duration-200 hover:shadow-lg"
                         key={generateUniqueKey(deployment, index)}
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div className="min-w-0 flex-1">
-                              <CardTitle className="truncate font-semibold text-lg">
+                              <CardTitle className="truncate text-lg font-semibold">
                                 {deployment.contractAddress}
                               </CardTitle>
                               <div className="mt-2 flex items-center gap-2">
@@ -623,22 +623,22 @@ export function ContractsDashboard({
                         <CardContent className="space-y-4">
                           {/* Contract Address */}
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                            <div className="text-muted-foreground flex items-center gap-2 text-xs">
                               <MapPin className="h-3 w-3" />
                               <span>Contract Address</span>
                             </div>
                             {addressUrl ? (
                               <Link
-                                className="group flex items-center gap-2 rounded-lg bg-muted/50 p-2 transition-colors hover:bg-muted/80"
+                                className="group bg-muted/50 hover:bg-muted/80 flex items-center gap-2 rounded-lg p-2 transition-colors"
                                 href={addressUrl}
                                 rel="noopener noreferrer"
                                 target="_blank"
                               >
                                 <code className="flex-1 truncate font-mono text-xs">{deployment.contractAddress}</code>
-                                <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
+                                <ExternalLink className="text-muted-foreground group-hover:text-primary h-3 w-3 shrink-0" />
                               </Link>
                             ) : (
-                              <code className="block truncate rounded-lg bg-muted/50 p-2 font-mono text-xs">
+                              <code className="bg-muted/50 block truncate rounded-lg p-2 font-mono text-xs">
                                 {deployment.contractAddress}
                               </code>
                             )}
@@ -646,22 +646,22 @@ export function ContractsDashboard({
 
                           {/* Transaction Hash */}
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                            <div className="text-muted-foreground flex items-center gap-2 text-xs">
                               <HashIcon className="h-3 w-3" />
                               <span>Transaction Hash</span>
                             </div>
                             {txUrl ? (
                               <Link
-                                className="group flex items-center gap-2 rounded-lg bg-muted/50 p-2 transition-colors hover:bg-muted/80"
+                                className="group bg-muted/50 hover:bg-muted/80 flex items-center gap-2 rounded-lg p-2 transition-colors"
                                 href={txUrl}
                                 rel="noopener noreferrer"
                                 target="_blank"
                               >
                                 <code className="flex-1 truncate font-mono text-xs">{deployment.deployHash}</code>
-                                <ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground group-hover:text-primary" />
+                                <ExternalLink className="text-muted-foreground group-hover:text-primary h-3 w-3 shrink-0" />
                               </Link>
                             ) : (
-                              <code className="block truncate rounded-lg bg-muted/50 p-2 font-mono text-xs">
+                              <code className="bg-muted/50 block truncate rounded-lg p-2 font-mono text-xs">
                                 {deployment.deployHash}
                               </code>
                             )}
@@ -669,7 +669,7 @@ export function ContractsDashboard({
 
                           {/* IPFS Source */}
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                            <div className="text-muted-foreground flex items-center gap-2 text-xs">
                               <FileCode className="h-3 w-3" />
                               <span>IPFS Source Code</span>
                             </div>
@@ -679,7 +679,7 @@ export function ContractsDashboard({
                               rel="noopener noreferrer"
                               target="_blank"
                             >
-                              <code className="flex-1 truncate font-mono text-purple-700 text-xs dark:text-purple-300">
+                              <code className="flex-1 truncate font-mono text-xs text-purple-700 dark:text-purple-300">
                                 {deployment.cid}
                               </code>
                               <ExternalLink className="h-3 w-3 shrink-0 text-purple-500 group-hover:text-purple-600 dark:group-hover:text-purple-400" />
@@ -699,13 +699,13 @@ export function ContractsDashboard({
           return (
             <Card>
               <CardContent className="p-12 text-center">
-                <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted/20">
-                  <FolderGit className="h-8 w-8 text-muted-foreground/50" />
+                <div className="bg-muted/20 mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full">
+                  <FolderGit className="text-muted-foreground/50 h-8 w-8" />
                 </div>
-                <h3 className="mb-2 font-semibold text-lg">
+                <h3 className="mb-2 text-lg font-semibold">
                   {filteredDeployments.length === 0 ? "No deployments yet" : "No matching deployments"}
                 </h3>
-                <p className="mb-4 text-muted-foreground">
+                <p className="text-muted-foreground mb-4">
                   {(() => {
                     if (filteredDeployments.length === 0) {
                       return filters.activeCategory === "my-contracts"
@@ -745,7 +745,7 @@ const PaginationControls = ({
 
   return (
     <div className="mt-6 flex items-center justify-between">
-      <div className="hidden text-muted-foreground text-sm md:block">
+      <div className="text-muted-foreground hidden text-sm md:block">
         Showing {(pagination.currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
         {Math.min(pagination.currentPage * ITEMS_PER_PAGE, pagination.totalItems)} of {pagination.totalItems}{" "}
         deployments
