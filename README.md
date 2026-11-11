@@ -207,6 +207,34 @@ Please report vulnerabilities privately through
 [GitHub security advisories](https://github.com/markeljan/web3gpt/security/advisories/new), not
 public issues.
 
+### Transitive advisory inventory (2026-11-11)
+
+Bun audit reports 10 remaining advisories below. These are awaiting upstream
+compatible fixes or consumer migrations; no cross-major overrides are forced.
+This is dependency tracking, not a claim that every affected path is browser-only.
+
+The existing axios override and postcss-selector-parser 6.1.5 override are retained.
+solc now resolves tmp 0.2.7 (fixes GHSA-7c78-jf6q-g5cm).
+A Bun scoped `viem` → `ws` 8.21.0 override fixes the nested WalletConnect
+viem 2.23.2 copies (GHSA-58qx-3vcg-4xpx and GHSA-96hv-2xvq-fx4p).
+Bun 1.4.2 supports this scope using lockfile version 3. ws 7.5.13 and the
+unrelated Solana ws 8.22.2 remain intact. These versions, ws 8.21.0,
+zod 4.6.7 and uuid 14.0.3 are outside the respective reported affected ranges.
+Remove overrides when upstream dependency ranges resolve fixed versions naturally.
+
+| Package | Severity | Advisory | Affected resolution / upstream follow-up |
+| --- | --- | --- | --- |
+| decode-uri-component | high | [GHSA-qr28-fpjm-wq7f](https://github.com/advisories/GHSA-qr28-fpjm-wq7f) | 0.2.2; WalletConnect → query-string 7.1.3 (^0.2.2); fixed 0.5.1 is outside its range |
+| decode-uri-component | moderate | [GHSA-vcc3-ghjq-m6fr](https://github.com/advisories/GHSA-vcc3-ghjq-m6fr) | 0.2.2; WalletConnect → query-string 7.1.3 (^0.2.2); fixed 0.5.1 is outside its range |
+| deepmerge | low | [GHSA-gcqx-w48m-w2h4](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) | 4.3.1; ultracite / @vanilla-extract/css; await a patched compatible release |
+| elliptic | low | [GHSA-848j-6mx2-7j84](https://github.com/advisories/GHSA-848j-6mx2-7j84) | 6.6.1; @unstoppabledomains/resolution; await upstream cryptography replacement |
+| katex | low | [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7) | 0.16.47; remark-math; fixed 0.18.2 requires upstream compatibility update |
+| stream-json | moderate | [GHSA-hqr4-qq8f-hg3x](https://github.com/advisories/GHSA-hqr4-qq8f-hg3x) | 1.9.1; @solana/web3.js → jayson (^1.9.1); fixed 3.6.0 requires upstream major migration |
+| stream-json | moderate | [GHSA-mjw6-4jj6-33hc](https://github.com/advisories/GHSA-mjw6-4jj6-33hc) | 1.9.1; @solana/web3.js → jayson (^1.9.1); fixed 3.6.0 requires upstream major migration |
+| stream-json | moderate | [GHSA-528h-pc64-c93x](https://github.com/advisories/GHSA-528h-pc64-c93x) | 1.9.1; @solana/web3.js → jayson (^1.9.1); fixed 3.6.0 requires upstream major migration |
+| uuid | moderate | [GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq) | 8.3.2 / 9.0.1; jayson / MetaMask utilities; fixed 11.1.1 requires upstream major migration |
+| zod | high | [GHSA-mrhx-c7xc-m3w5](https://github.com/advisories/GHSA-mrhx-c7xc-m3w5) | 3.22.4 / 3.25.76; Reown / Coinbase / Farcaster and other v3 consumers; fixed 4.6.6 requires upstream major migration |
+
 ## License
 
 [MIT](LICENSE)
