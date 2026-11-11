@@ -51,9 +51,9 @@ describe("redis client", () => {
         url: String(input),
       })
       // Answer every queued command (auto-pipelining batches them) with a numeric string or a JSON
-      // object, base64-encoded as the client requests by default.
+      // object, unencoded as the client requests by default.
       const commands = JSON.parse(String(init.body)) as string[][]
-      const results = commands.map(([command]) => ({ result: btoa(command === "hget" ? "1001" : '{"a":1}') }))
+      const results = commands.map(([command]) => ({ result: command === "hget" ? "1001" : '{"a":1}' }))
       return Promise.resolve(Response.json(results))
     }) as unknown as typeof fetch
 
@@ -64,6 +64,7 @@ describe("redis client", () => {
     expect(artifact).toEqual({ a: 1 })
     expect(requests).toHaveLength(1)
     expect(requests[0].url).toBe("https://kv.example/pipeline")
+    expect(requests[0].headers.has("upstash-encoding")).toBe(false)
     expect(requests[0].init.cache).toBe("default")
     expect(requests[0].headers.get("authorization")).toBe("Bearer kv-token")
     expect([...requests[0].headers.keys()].some((name) => name.startsWith("upstash-telemetry"))).toBe(false)
