@@ -15,7 +15,7 @@ export function AssistantAvatar({ imageUrl, name = "Web3GPT", className }: Assis
   return (
     <div
       className={cn(
-        "relative flex size-7 shrink-0 select-none items-center justify-center overflow-hidden rounded-full border bg-background",
+        "bg-background relative flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border select-none",
         className
       )}
     >

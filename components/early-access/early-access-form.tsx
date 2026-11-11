@@ -112,15 +112,15 @@ export function EarlyAccessForm({ className, defaultEmail, onSubscribed }: Early
 export function EarlyAccessSuccess({ email, className }: { email: string | null; className?: string }) {
   return (
     <div className={cn("flex items-start gap-3 text-left", className)} role="status">
-      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <span className="bg-primary text-primary-foreground mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full">
         <Check aria-hidden className="size-3.5" />
       </span>
       <div className="min-w-0">
-        <p className="font-medium text-sm">You're on the list</p>
+        <p className="text-sm font-medium">You're on the list</p>
         <p className="text-muted-foreground text-xs">
           {email ? (
             <>
-              We'll email <span className="break-all font-medium text-foreground">{email}</span> when there's news.
+              We'll email <span className="text-foreground font-medium break-all">{email}</span> when there's news.
             </>
           ) : (
             "We'll email you when there's news."

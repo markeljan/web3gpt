@@ -33,13 +33,13 @@ export function EarlyAccessCard({ userId, className }: { userId?: string; classN
     <section
       aria-labelledby="early-access-title"
       className={cn(
-        "fade-in slide-in-from-bottom-2 relative mx-auto w-full max-w-xl animate-in rounded-xl border bg-card/60 p-4 text-left shadow-xs duration-300 sm:p-5",
+        "fade-in slide-in-from-bottom-2 animate-in bg-card/60 relative mx-auto w-full max-w-xl rounded-xl border p-4 text-left shadow-xs duration-300 sm:p-5",
         className
       )}
     >
       <Button
         aria-label={justSubscribed ? "Close" : "Dismiss early access sign-up"}
-        className="absolute top-2 right-2 size-7 text-muted-foreground hover:text-foreground"
+        className="text-muted-foreground hover:text-foreground absolute top-2 right-2 size-7"
         onClick={dismiss}
         size="icon"
         variant="ghost"
@@ -52,7 +52,7 @@ export function EarlyAccessCard({ userId, className }: { userId?: string; classN
       ) : (
         <>
           <div className="mb-3 pr-8">
-            <h2 className="font-semibold text-sm" id="early-access-title">
+            <h2 className="text-sm font-semibold" id="early-access-title">
               Get early access
             </h2>
             <p className="text-muted-foreground text-sm">Be first to try new agents, chains and features.</p>

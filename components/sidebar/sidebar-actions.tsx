@@ -63,7 +63,7 @@ export function SidebarActions({ chat }: SidebarActionsProps) {
       <div className="space-x-1">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button className="size-6 p-0 hover:bg-background" onClick={() => setShareDialogOpen(true)} variant="ghost">
+            <Button className="hover:bg-background size-6 p-0" onClick={() => setShareDialogOpen(true)} variant="ghost">
               <IconShare />
               <span className="sr-only">Share</span>
             </Button>
@@ -73,7 +73,7 @@ export function SidebarActions({ chat }: SidebarActionsProps) {
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              className="size-6 p-0 hover:bg-background"
+              className="hover:bg-background size-6 p-0"
               disabled={isDeletePending}
               onClick={() => setDeleteDialogOpen(true)}
               variant="ghost"

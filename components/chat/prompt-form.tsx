@@ -93,8 +93,8 @@ export const PromptForm = ({ onSubmit, stop, onNewChat, isLoading, isEmpty }: Pr
   return (
     <div className="flex flex-col gap-2">
       {isGuildBannerOpen ? (
-        <div className="flex items-center gap-3 rounded-xl border bg-background/95 px-3 py-2 text-sm shadow-xs">
-          <span className="min-w-0 flex-1 text-muted-foreground">
+        <div className="bg-background/95 flex items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-xs">
+          <span className="text-muted-foreground min-w-0 flex-1">
             Join the w3gpt Guild for special roles and upcoming rewards.
           </span>
           <Button asChild className="h-7 shrink-0 px-2" size="sm" variant="secondary">
@@ -104,7 +104,7 @@ export const PromptForm = ({ onSubmit, stop, onNewChat, isLoading, isEmpty }: Pr
           </Button>
           <Button
             aria-label="Dismiss guild invitation"
-            className="size-7 shrink-0 text-muted-foreground"
+            className="text-muted-foreground size-7 shrink-0"
             onClick={dismissGuildBanner}
             size="icon"
             variant="ghost"
@@ -117,15 +117,15 @@ export const PromptForm = ({ onSubmit, stop, onNewChat, isLoading, isEmpty }: Pr
       <form onSubmit={handleSubmit} ref={formRef}>
         <div
           className={cn(
-            "flex items-end gap-2 rounded-2xl border bg-background p-2 shadow-lg transition-colors",
-            "focus-within:border-ring/60 focus-within:ring-1 focus-within:ring-ring/30"
+            "bg-background flex items-end gap-2 rounded-2xl border p-2 shadow-lg transition-colors",
+            "focus-within:border-ring/60 focus-within:ring-ring/30 focus-within:ring-1"
           )}
         >
           <Tooltip delayDuration={500}>
             <TooltipTrigger asChild>
               <Button
                 aria-label="Start a new chat"
-                className="size-9 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground hover:text-foreground size-9 shrink-0 rounded-full"
                 disabled={isEmpty || isLoading}
                 onClick={onNewChat}
                 size="icon"

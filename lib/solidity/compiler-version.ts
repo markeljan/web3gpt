@@ -20,12 +20,12 @@ export const BUNDLED_COMPILER_VERSION = DEFAULT_COMPILER_VERSION
  */
 export const MIN_COMPILER_VERSION = "0.4.11"
 
-const PRAGMA_REGEX = /\bpragma\s+solidity\s+([^;]*);/g
-const LONG_VERSION_REGEX = /^v(\d+\.\d+\.\d+)\+commit\.[0-9a-f]{8}$/
-const RELEASE_FILE_REGEX = /^soljson-(v\d+\.\d+\.\d+\+commit\.[0-9a-f]{8})\.js$/
-const ADJACENT_COMPARATOR_REGEX = /([\dxX*])(?=[<>=^~])/g
-const SHA256_REGEX = /^(?:0x)?[0-9a-f]{64}$/i
-const HEX_PREFIX_REGEX = /^0x/
+const PRAGMA_REGEX = /\bpragma\s+solidity\s+(?<part1>[^;]*);/gu
+const LONG_VERSION_REGEX = /^v(?<part1>\d+\.\d+\.\d+)\+commit\.[0-9a-f]{8}$/u
+const RELEASE_FILE_REGEX = /^soljson-(?<part1>v\d+\.\d+\.\d+\+commit\.[0-9a-f]{8})\.js$/u
+const ADJACENT_COMPARATOR_REGEX = /(?<part1>[\dxX*])(?=[<>=^~])/gu
+const SHA256_REGEX = /^(?:0x)?[0-9a-f]{64}$/iu
+const HEX_PREFIX_REGEX = /^0x/u
 
 /** Raised for version problems the model should relay to the user as-is. */
 export class CompilerVersionError extends Error {}
@@ -70,7 +70,7 @@ export const BUNDLED_RELEASE = toRelease(BUNDLED_COMPILER_VERSION)
 
 /** The text of every `pragma solidity ...;` in `source`, ignoring comments. */
 export const extractVersionPragmas = (source: string): string[] =>
-  Array.from(maskComments(source).matchAll(PRAGMA_REGEX), (match) => match[1].trim().replace(/\s+/g, " "))
+  Array.from(maskComments(source).matchAll(PRAGMA_REGEX), (match) => match[1].trim().replace(/\s+/gu, " "))
 
 /**
  * solc accepts comparators written without a space between them

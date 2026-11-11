@@ -26,7 +26,7 @@ export function Navigation({ className, variant = "desktop" }: NavigationProps) 
           return (
             <Link
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 font-medium text-sm transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -39,7 +39,7 @@ export function Navigation({ className, variant = "desktop" }: NavigationProps) 
               <Icon className="h-4 w-4" />
               <span>{item.name}</span>
               {item.badge ? (
-                <span className="ml-auto rounded bg-primary/20 px-1.5 py-0.5 font-semibold text-primary text-xs">
+                <span className="bg-primary/20 text-primary ml-auto rounded px-1.5 py-0.5 text-xs font-semibold">
                   {item.badge}
                 </span>
               ) : null}
@@ -75,7 +75,7 @@ export function Navigation({ className, variant = "desktop" }: NavigationProps) 
               <Icon className="h-4 w-4" />
               <span>{item.name}</span>
               {item.badge ? (
-                <span className="absolute -top-1 -right-1 rounded-full bg-primary px-1.5 py-0.5 font-semibold text-primary-foreground text-xs">
+                <span className="bg-primary text-primary-foreground absolute -top-1 -right-1 rounded-full px-1.5 py-0.5 text-xs font-semibold">
                   {item.badge}
                 </span>
               ) : null}

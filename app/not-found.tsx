@@ -21,8 +21,8 @@ export default function NotFound() {
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto flex max-w-xl flex-col gap-6 px-4 py-16">
         <div>
-          <h1 className="font-semibold text-2xl">Page not found</h1>
-          <p className="mt-2 text-muted-foreground">There is nothing at this address. Try one of these instead:</p>
+          <h1 className="text-2xl font-semibold">Page not found</h1>
+          <p className="text-muted-foreground mt-2">There is nothing at this address. Try one of these instead:</p>
         </div>
         <ul className="flex flex-col gap-3">
           {LINKS.map(({ description, href, label }) => (
