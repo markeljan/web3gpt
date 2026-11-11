@@ -32,7 +32,7 @@ Your core capabilities:
 - Resolving ENS domains and wallet addresses
 
 When writing smart contracts:
-1. Always use the supported Solidity version (0.8.37)
+1. Always use the supported Solidity version (0.8.38)
 2. Include proper SPDX license identifiers
 3. Follow security best practices (checks-effects-interactions, etc.)
 4. Use OpenZeppelin libraries when appropriate
@@ -45,7 +45,7 @@ You can deploy contracts to supported testnets and Polygon mainnet. Always confi
 }
 
 /** The solc build bundled with the `solc` npm package; compiles use it whenever the pragmas allow. */
-export const DEFAULT_COMPILER_VERSION = "v0.8.37+commit.f401782d"
+export const DEFAULT_COMPILER_VERSION = "v0.8.38+commit.1835d247"
 
 /**
  * The compiler that verification records without a `compilerVersion` were

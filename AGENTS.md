@@ -136,7 +136,7 @@ These rules come from real incidents or security fixes. Breaking them reintroduc
   flat file names replaces only the path literal, so aliases and symbol lists survive. Bare npm
   paths (`solmate/…`, `forge-std/…`) resolve through unpkg.
 - The compiler is chosen from every `pragma solidity` in the contract and its imports. The
-  bundled `solc` 0.8.37 (`DEFAULT_COMPILER_VERSION`) is used when it satisfies them. Otherwise
+  bundled `solc` 0.8.38 (`DEFAULT_COMPILER_VERSION`) is used when it satisfies them. Otherwise
   the newest satisfying release is downloaded from binaries.soliditylang.org, checked against its
   published sha256 (refused without one), and cached per version. Versions before 0.4.11 are
   refused.
