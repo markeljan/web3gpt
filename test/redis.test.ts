@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
+import { Redis } from "@upstash/redis"
 
 mock.module("server-only", () => ({}))
 
@@ -41,31 +42,46 @@ describe("redis client", () => {
     expect(redis).toBeDefined()
   })
 
-  test("keeps @vercel/kv's behaviour: deserialized values, cache default, no telemetry", async () => {
-    const requests: { body: unknown; headers: Headers; init: RequestInit; url: string }[] = []
-    globalThis.fetch = mock((input: string | URL | Request, init: RequestInit = {}) => {
-      requests.push({
-        body: JSON.parse(String(init.body)),
-        headers: new Headers(init.headers),
-        init,
-        url: String(input),
-      })
-      // Answer every queued command (auto-pipelining batches them) with a numeric string or a JSON
-      // object, base64-encoded as the client requests by default.
-      const commands = JSON.parse(String(init.body)) as string[][]
-      const results = commands.map(([command]) => ({ result: btoa(command === "hget" ? "1001" : '{"a":1}') }))
-      return Promise.resolve(Response.json(results))
-    }) as unknown as typeof fetch
+  test.each([false, "base64"] as const)(
+    "deserializes %s responses with cache default and no telemetry",
+    async (encoding) => {
+      const requests: { body: unknown; headers: Headers; init: RequestInit; url: string }[] = []
+      globalThis.fetch = mock((input: string | URL | Request, init: RequestInit = {}) => {
+        requests.push({
+          body: JSON.parse(String(init.body)),
+          headers: new Headers(init.headers),
+          init,
+          url: String(input),
+        })
+        // Answer every queued command (auto-pipelining batches them) with a numeric string or a JSON
+        // object, encoded according to the request header.
+        const commands = JSON.parse(String(init.body)) as string[][]
+        const base64 = new Headers(init.headers).get("Upstash-Encoding") === "base64"
+        const results = commands.map(([command]) => {
+          const result = command === "hget" ? "1001" : '{"a":1}'
+          return { result: base64 ? btoa(result) : result }
+        })
+        return Promise.resolve(Response.json(results))
+      }) as unknown as typeof fetch
 
-    const client = createRedisClient(KV)
-    const [owner, artifact] = await Promise.all([client.hget("chat:1", "userId"), client.get("wallet-deploy:1")])
+      const client = encoding
+        ? new Redis({
+            ...resolveRedisCredentials(KV),
+            cache: "default",
+            enableTelemetry: false,
+            responseEncoding: encoding,
+          })
+        : createRedisClient(KV)
+      const [owner, artifact] = await Promise.all([client.hget("chat:1", "userId"), client.get("wallet-deploy:1")])
 
-    expect(owner).toBe(1001)
-    expect(artifact).toEqual({ a: 1 })
-    expect(requests).toHaveLength(1)
-    expect(requests[0].url).toBe("https://kv.example/pipeline")
-    expect(requests[0].init.cache).toBe("default")
-    expect(requests[0].headers.get("authorization")).toBe("Bearer kv-token")
-    expect([...requests[0].headers.keys()].some((name) => name.startsWith("upstash-telemetry"))).toBe(false)
-  })
+      expect(owner).toBe(1001)
+      expect(artifact).toEqual({ a: 1 })
+      expect(requests).toHaveLength(1)
+      expect(requests[0].url).toBe("https://kv.example/pipeline")
+      expect(requests[0].headers.get("upstash-encoding")).toBe(encoding || null)
+      expect(requests[0].init.cache).toBe("default")
+      expect(requests[0].headers.get("authorization")).toBe("Bearer kv-token")
+      expect([...requests[0].headers.keys()].some((name) => name.startsWith("upstash-telemetry"))).toBe(false)
+    }
+  )
 })
