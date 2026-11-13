@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og"
-import type { NextRequest } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { APP_URL } from "@/lib/config"
 import { getPublishedChat } from "@/lib/data/kv"
 
@@ -9,10 +9,14 @@ const DEFAULT_HEIGHT = 630
 
 export async function GET(req: NextRequest) {
   const chatId = req.nextUrl.searchParams.get("id")
-  const height = req.nextUrl.searchParams.get("h")
+  const requestedHeight = Number(req.nextUrl.searchParams.get("h"))
+  const height =
+    Number.isInteger(requestedHeight) && requestedHeight >= 200 && requestedHeight <= 1200
+      ? requestedHeight
+      : DEFAULT_HEIGHT
 
   if (!chatId) {
-    throw new Error("Chat ID is required")
+    return NextResponse.json({ code: "missing_id", error: "id query parameter is required" }, { status: 400 })
   }
 
   const chat = await getPublishedChat(chatId)
@@ -83,7 +87,7 @@ export async function GET(req: NextRequest) {
       </div>
     </div>,
     {
-      height: height ? Number.parseInt(height, 10) : DEFAULT_HEIGHT,
+      height,
       width: 1200,
     }
   )
