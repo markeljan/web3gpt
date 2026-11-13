@@ -31,12 +31,12 @@ bun run typecheck
 bun run test         # = bun test --isolate (see Testing)
 bun run lint         # must report 0 errors and 0 warnings
 bun run format       # ultracite fix
-bun run build        # needs env vars; see .env.example
+bun run build        # no environment variables required
 ```
 
 CI (`.github/workflows/ci.yml`) runs `bun install --frozen-lockfile`, typecheck, test and lint
-on every PR and on pushes to `main`. It does not run `next build`, because the build needs real
-environment variables. `lib/solidity/deploy.ts` reads `DEPLOYER_PRIVATE_KEY` at module load.
+on every PR and on pushes to `main`. It does not run `next build`. The build needs no environment
+variables; the runtime app still requires configuration (see `.env.example`).
 Lefthook runs `bunx ultracite fix` on the staged JS/TS/JSON/CSS files before each commit.
 
 ## Map
