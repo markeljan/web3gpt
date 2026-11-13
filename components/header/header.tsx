@@ -1,4 +1,3 @@
-import Link from "next/link"
 import { ConnectButton } from "@/components/connect-button"
 import { ModelBadge } from "@/components/header/model-badge"
 import { MetisTeaser } from "@/components/metis-teaser"
@@ -19,14 +18,14 @@ export const Header = () => {
         {/* Model Badge - Desktop only */}
         <div className="flex min-w-0 items-center gap-3">
           <ModelBadge />
-          <Link
+          <a
             className="text-muted-foreground hover:text-foreground text-[11px] whitespace-nowrap underline-offset-4 transition-colors hover:underline sm:text-xs"
             href="/skill.md"
             rel="noreferrer"
             target="_blank"
           >
             Agents: install our skill.md
-          </Link>
+          </a>
         </div>
       </div>
 
