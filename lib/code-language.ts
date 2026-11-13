@@ -10,7 +10,7 @@ const LANGUAGE_ALIASES: Record<string, string> = {
 }
 
 const SOLIDITY_CODE_REGEX =
-  /(?:pragma\s+solidity\b|SPDX-License-Identifier:|(?:contract|interface|library|abstract\s+contract)\s+[A-Za-z_]\w*|import\s+["']@openzeppelin\/)/m
+  /(?:pragma\s+solidity\b|SPDX-License-Identifier:|(?:contract|interface|library|abstract\s+contract)\s+[A-Za-z_]\w*|import\s+["']@openzeppelin\/)/mu
 
 export type NormalizeCodeLanguageOptions = {
   inferFromContent?: boolean

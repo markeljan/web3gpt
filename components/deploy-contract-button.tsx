@@ -20,8 +20,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useWalletDeploy } from "@/lib/hooks/use-wallet-deploy"
 
-const CONTRACT_NAME_REGEX = /contract\s+(\w+)\s*(?:is|{)/
-const CONSTRUCTOR_ARGS_REGEX = /constructor\(([^)]+)\)/
+const CONTRACT_NAME_REGEX = /contract\s+(?<part1>\w+)\s*(?:is|\{)/u
+const CONSTRUCTOR_ARGS_REGEX = /constructor\((?<part1>[^)]+)\)/u
 
 export const DeployContractButton = ({ sourceCode, disabled = false }: { disabled?: boolean; sourceCode: string }) => {
   const { deploy: deployWithWallet } = useWalletDeploy()
@@ -68,9 +68,12 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
     () =>
       constructorArgNames.map((arg, index) => (
         <div className="flex flex-col gap-2" key={`${arg}`}>
-          <Label className="font-medium text-sm">{arg}</Label>
+          <Label className="text-sm font-medium" htmlFor={`constructor-arg-${index}`}>
+            {arg}
+          </Label>
           <Input
             className="rounded-md border border-gray-300 p-2"
+            id={`constructor-arg-${index}`}
             onChange={(e) => {
               e.preventDefault()
               handleInputChange(index, e.target.value)
@@ -135,7 +138,7 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
       >
         <DialogTrigger asChild>
           <Button
-            className="mr-2 bg-primary/80 text-primary-foreground hover:bg-primary"
+            className="bg-primary/80 text-primary-foreground hover:bg-primary mr-2"
             disabled={disabled || !isSupportedChain}
             onClick={() => {
               setIsDialogOpen(true)
@@ -157,23 +160,23 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
           <div className="flex flex-col gap-4 py-4">
             <div className="flex flex-col gap-2">
               <div className="flex">
-                <p className="font-medium text-sm">Agent Deploy</p>
+                <p className="text-sm font-medium">Agent Deploy</p>
                 <Badge className="ml-2 rounded" variant="default">
                   RECOMMENDED
                 </Badge>
               </div>
-              <p className="text-gray-500 text-sm">
+              <p className="text-sm text-gray-500">
                 {`This method does not require wallet connection. Just use the keyword "deploy" in the chat.`}
               </p>
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex">
-                <p className="font-medium text-sm">Deploy with Wallet</p>
+                <p className="text-sm font-medium">Deploy with Wallet</p>
                 <Badge className="ml-2 rounded" variant="destructive">
                   ADVANCED
                 </Badge>
               </div>
-              <p className="text-gray-500 text-sm">
+              <p className="text-sm text-gray-500">
                 Sign and deploy the contract using your own wallet. Be cautious of risks and network fees.
               </p>
             </div>
@@ -188,7 +191,7 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
             {isErrorDeploying ? <p className="text-destructive text-sm">Error deploying contract.</p> : null}
             {isDeploying ? <IconSpinner className="size-8 animate-spin text-gray-500" /> : null}
             {explorerUrl ? (
-              <Link className="text-green-500 text-sm" href={explorerUrl} rel="noopener noreferrer" target="_blank">
+              <Link className="text-sm text-green-500" href={explorerUrl} rel="noopener noreferrer" target="_blank">
                 <div className="flex items-center">
                   View on Explorer
                   <IconExternalLink className="ml-1" />
@@ -196,7 +199,7 @@ export const DeployContractButton = ({ sourceCode, disabled = false }: { disable
               </Link>
             ) : null}
             {ipfsUrl ? (
-              <Link className="text-blue-500 text-sm" href={ipfsUrl} rel="noopener noreferrer" target="_blank">
+              <Link className="text-sm text-blue-500" href={ipfsUrl} rel="noopener noreferrer" target="_blank">
                 <div className="flex items-center">
                   View on IPFS
                   <IconExternalLink className="ml-1" />

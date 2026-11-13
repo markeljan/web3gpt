@@ -12,7 +12,7 @@ export function ButtonScrollToBottom({ className }: { className?: string }) {
     <Button
       aria-label="Scroll to latest message"
       className={cn(
-        "absolute -top-5 left-1/2 z-10 size-9 -translate-x-1/2 rounded-full border bg-background shadow-lg transition-all duration-200 motion-reduce:transition-none",
+        "bg-background absolute -top-5 left-1/2 z-10 size-9 -translate-x-1/2 rounded-full border shadow-lg transition-all duration-200 motion-reduce:transition-none",
         isAtBottom ? "pointer-events-none translate-y-1 opacity-0" : "translate-y-0 opacity-100",
         className
       )}

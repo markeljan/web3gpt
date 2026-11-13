@@ -24,7 +24,7 @@ export function SidebarItem({ chat, isActive, children }: SidebarItemProps) {
       <div className="absolute top-1 left-2 flex size-6 items-center justify-center">
         {chat.published ? (
           <Tooltip delayDuration={1000}>
-            <TooltipTrigger className="focus:bg-muted focus:ring-1 focus:ring-ring" tabIndex={-1}>
+            <TooltipTrigger className="focus:bg-muted focus:ring-ring focus:ring-1" tabIndex={-1}>
               <IconUsers className="mr-2" />
             </TooltipTrigger>
             <TooltipContent>This is a published chat.</TooltipContent>
@@ -37,7 +37,7 @@ export function SidebarItem({ chat, isActive, children }: SidebarItemProps) {
         className={cn(buttonVariants({ variant: "ghost" }), "w-full pr-4 pl-8", isActive && "bg-accent pr-16")}
         href={`/chat/${chat.id}`}
       >
-        <div className="relative max-h-5 flex-1 select-none overflow-hidden text-ellipsis break-all" title={chat.title}>
+        <div className="relative max-h-5 flex-1 overflow-hidden break-all text-ellipsis select-none" title={chat.title}>
           <span className="whitespace-nowrap">{chat.title}</span>
         </div>
       </Link>

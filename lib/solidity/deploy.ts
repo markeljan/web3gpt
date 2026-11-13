@@ -12,7 +12,21 @@ import { getContractFileName } from "@/lib/solidity/utils"
 import type { DeployContractParams, DeployContractResult, VerifyContractParams } from "@/lib/types"
 import { getExplorerUrl, getIpfsUrl } from "@/lib/utils"
 
-const DEPLOYER_ACCOUNT = privateKeyToAccount(`0x${process.env.DEPLOYER_PRIVATE_KEY}`)
+let cachedDeployerAccount: ReturnType<typeof privateKeyToAccount> | undefined
+
+const getDeployerAccount = () => {
+  if (cachedDeployerAccount) {
+    return cachedDeployerAccount
+  }
+
+  const privateKey = process.env.DEPLOYER_PRIVATE_KEY
+  if (!privateKey) {
+    throw new Error("DEPLOYER_PRIVATE_KEY is not set")
+  }
+
+  cachedDeployerAccount = privateKeyToAccount(`0x${privateKey}`)
+  return cachedDeployerAccount
+}
 const DEPLOYMENT_RECEIPT_TIMEOUT_MS = 45_000
 
 export const deployContract = async ({
@@ -22,6 +36,7 @@ export const deployContract = async ({
   constructorArgs,
   imports,
 }: DeployContractParams): Promise<DeployContractResult> => {
+  const deployerAccount = getDeployerAccount()
   const viemChain = getChainById(Number(chainId))
 
   if (!viemChain) {
@@ -35,7 +50,7 @@ export const deployContract = async ({
   })
 
   const walletClient = createWalletClient({
-    account: DEPLOYER_ACCOUNT,
+    account: deployerAccount,
     chain: viemChain,
     transport: getDeploymentTransport(viemChain),
   }).extend(publicActions)
@@ -45,7 +60,7 @@ export const deployContract = async ({
     throw error
   }
 
-  const deployerAddress = DEPLOYER_ACCOUNT.address
+  const deployerAddress = deployerAccount.address
 
   const deployData = encodeDeployData({
     abi,
@@ -55,7 +70,7 @@ export const deployContract = async ({
 
   const deployHash = await walletClient.deployContract({
     abi,
-    account: DEPLOYER_ACCOUNT,
+    account: deployerAccount,
     args: constructorArgs,
     bytecode,
   })

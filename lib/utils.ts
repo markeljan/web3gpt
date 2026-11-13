@@ -6,7 +6,7 @@ import { getChainDetails } from "@/lib/config"
 export const cn = (...inputs: ClassValue[]): string => twMerge(clsx(inputs))
 
 const SECOND_IN_MS = 1000
-const TRAILING_SLASH_REGEX = /\/+$/
+const TRAILING_SLASH_REGEX = /\/+$/u
 
 export const formatDate = (input: string | number | Date): string => {
   let date: Date
@@ -36,7 +36,7 @@ export const formatDate = (input: string | number | Date): string => {
 
 export const getIpfsUrl = (cid: string): string => `${process.env.NEXT_PUBLIC_IPFS_GATEWAY}/ipfs/${cid}`
 
-const HASH_PREFIX_REGEX = /^0x/
+const HASH_PREFIX_REGEX = /^0x/u
 export function ensureHashPrefix(bytecode: string | Hash): Hash {
   return `0x${bytecode.replace(HASH_PREFIX_REGEX, "")}`
 }

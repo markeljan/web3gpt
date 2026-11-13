@@ -33,11 +33,11 @@ type MessageParts = UIMessage["parts"]
 type MessagePart = MessageParts[number]
 type ReasoningPart = Extract<MessagePart, { type: "reasoning" }>
 
-const LANGUAGE_REGEX = /language-([a-z0-9#+-]+)/i
-const NEWLINE_REGEX = /\n$/
-const REASONING_SPLIT_REGEX = /\n{2,}/
-const REASONING_HEADING_REGEX = /^#{1,6}\s*/
-const TOOL_NAME_SEPARATOR_REGEX = /[_-]+/g
+const LANGUAGE_REGEX = /language-(?<part1>[a-z0-9#+-]+)/iu
+const NEWLINE_REGEX = /\n$/u
+const REASONING_SPLIT_REGEX = /\n{2,}/u
+const REASONING_HEADING_REGEX = /^#{1,6}\s*/u
+const TOOL_NAME_SEPARATOR_REGEX = /[_-]+/gu
 
 function splitReasoningText(text: string): { title: string; details: string } {
   const normalized = text.trim()
@@ -96,7 +96,7 @@ function getToolDisplay(state: string | undefined): ToolDisplay {
       icon: (
         <Loader2
           aria-hidden="true"
-          className="size-3.5 animate-spin text-muted-foreground motion-reduce:animate-none"
+          className="text-muted-foreground size-3.5 animate-spin motion-reduce:animate-none"
         />
       ),
       label: (name) => `Running ${name.toLowerCase()}`,
@@ -105,7 +105,7 @@ function getToolDisplay(state: string | undefined): ToolDisplay {
   if (state && completeStates.includes(state)) {
     return {
       className: "border-border bg-muted/30 text-muted-foreground",
-      icon: <Check aria-hidden="true" className="size-3.5 text-primary" />,
+      icon: <Check aria-hidden="true" className="text-primary size-3.5" />,
       label: (name) => name,
     }
   }
@@ -323,7 +323,7 @@ function ChatMessageComponent({
 
     return (
       <ChainOfThought
-        className="mb-3 rounded-xl border border-border/60 bg-muted/20 px-3 py-3 pb-4"
+        className="border-border/60 bg-muted/20 mb-3 rounded-xl border px-3 py-3 pb-4"
         defaultOpen={false}
         key={`${message.id}-reasoning-group`}
       >
@@ -340,7 +340,7 @@ function ChatMessageComponent({
                 key={`${message.id}-reasoning-step-${index}`}
                 label={
                   <MemoizedReactMarkdown
-                    className="prose prose-sm dark:prose-invert wrap-break-word prose-headings:my-0 prose-p:my-0 prose-pre:my-2 max-w-full prose-pre:p-0"
+                    className="prose prose-sm dark:prose-invert prose-headings:my-0 prose-p:my-0 prose-pre:my-2 prose-pre:p-0 max-w-full wrap-break-word"
                     components={components}
                     remarkPlugins={[remarkGfm, remarkMath]}
                   >
@@ -351,7 +351,7 @@ function ChatMessageComponent({
               >
                 {details ? (
                   <MemoizedReactMarkdown
-                    className="prose prose-sm dark:prose-invert wrap-break-word prose-headings:my-0 prose-ol:my-2 prose-p:my-0 prose-pre:my-2 prose-ul:my-2 max-w-full prose-pre:p-0 text-muted-foreground"
+                    className="prose prose-sm dark:prose-invert prose-headings:my-0 prose-ol:my-2 prose-p:my-0 prose-pre:my-2 prose-ul:my-2 prose-pre:p-0 text-muted-foreground max-w-full wrap-break-word"
                     components={components}
                     remarkPlugins={[remarkGfm, remarkMath]}
                   >
@@ -376,7 +376,7 @@ function ChatMessageComponent({
         content = (
           <MemoizedReactMarkdown
             className={cn(
-              "prose wrap-break-word prose-pre:my-3 max-w-full prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed",
+              "prose prose-pre:my-3 prose-pre:bg-transparent prose-pre:p-0 prose-p:leading-relaxed max-w-full wrap-break-word",
               // The bubble sets its own foreground; force every prose descendant
               // to inherit it rather than using the (inverted) prose palette.
               isUser ? "prose-p:my-0 text-inherit **:text-inherit" : "dark:prose-invert"
@@ -392,7 +392,7 @@ function ChatMessageComponent({
       } else if (item.type === "source-url" && item.part.type === "source-url") {
         content = (
           <a
-            className="my-1 inline-flex items-center gap-1 text-primary text-xs hover:underline"
+            className="text-primary my-1 inline-flex items-center gap-1 text-xs hover:underline"
             href={item.part.url}
             rel="noopener noreferrer"
             target="_blank"
@@ -415,10 +415,10 @@ function ChatMessageComponent({
     return (
       <div className="group flex w-full flex-col items-end gap-1.5">
         <div className="flex max-w-[85%] items-start gap-3">
-          <div className="min-w-0 overflow-hidden rounded-2xl bg-secondary px-4 py-2.5 text-secondary-foreground">
+          <div className="bg-secondary text-secondary-foreground min-w-0 overflow-hidden rounded-2xl px-4 py-2.5">
             {renderMessageParts()}
           </div>
-          <div className="relative mt-0.5 flex size-7 shrink-0 select-none items-center justify-center overflow-hidden rounded-full border bg-background">
+          <div className="bg-background relative mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border select-none">
             {avatarUrl ? (
               <Image alt="Your avatar" fill sizes="28px" src={avatarUrl} />
             ) : (

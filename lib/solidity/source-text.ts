@@ -30,7 +30,7 @@ const endOfComment = (source: string, start: number) => {
   return start
 }
 
-const blank = (text: string) => text.replace(/[^\n]/g, " ")
+const blank = (text: string) => text.replace(/[^\n]/gu, (char) => " ".repeat(char.length))
 
 /**
  * Returns `source` with every comment replaced by spaces (newlines are kept).

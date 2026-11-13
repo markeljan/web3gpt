@@ -9,11 +9,11 @@ export const SidebarAgents = () => (
   <div className="space-y-1">
     {AGENTS_ARRAY.map((assistant) => (
       <Tooltip delayDuration={700} key={assistant.id}>
-        <TooltipTrigger className="w-full focus:bg-muted focus:ring-1 focus:ring-ring">
+        <TooltipTrigger className="focus:bg-muted focus:ring-ring w-full focus:ring-1">
           <Button
             asChild
             className={cn(
-              "flex h-9 w-full items-center justify-start overflow-clip p-2 hover:bg-accent hover:text-accent-foreground hover:no-underline"
+              "hover:bg-accent hover:text-accent-foreground flex h-9 w-full items-center justify-start overflow-clip p-2 hover:no-underline"
             )}
             variant="link"
           >
@@ -27,7 +27,7 @@ export const SidebarAgents = () => (
                   src={assistant.imageUrl}
                 />
               </div>
-              <p className="flex-1 truncate text-left font-medium text-foreground text-xs">{assistant.name}</p>
+              <p className="text-foreground flex-1 truncate text-left text-xs font-medium">{assistant.name}</p>
             </Link>
           </Button>
         </TooltipTrigger>

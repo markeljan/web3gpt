@@ -5,7 +5,7 @@ import { getAiModel } from "@/lib/ai-model"
 export function ModelBadge() {
   return (
     <Badge
-      className="hidden border-primary/20 bg-primary/10 px-2 py-0.5 font-mono text-[10px] text-primary lg:inline-flex"
+      className="border-primary/20 bg-primary/10 text-primary hidden px-2 py-0.5 font-mono text-[10px] lg:inline-flex"
       variant="secondary"
     >
       {getAiModel()}

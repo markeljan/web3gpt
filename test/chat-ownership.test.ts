@@ -11,7 +11,7 @@ const hashes = new Map<string, Hash>()
 const zsets = new Map<string, Map<string, number>>()
 const sets = new Map<string, Set<string>>()
 
-const NUMERIC = /^\d+$/
+const NUMERIC = /^\d+$/u
 const deserialize = (value: unknown) => (typeof value === "string" && NUMERIC.test(value) ? Number(value) : value)
 
 const getHash = (key: string): Hash => hashes.get(key) ?? {}

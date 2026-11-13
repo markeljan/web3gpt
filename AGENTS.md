@@ -31,12 +31,12 @@ bun run typecheck
 bun run test         # = bun test --isolate (see Testing)
 bun run lint         # must report 0 errors and 0 warnings
 bun run format       # ultracite fix
-bun run build        # needs env vars; see .env.example
+bun run build        # no environment variables required
 ```
 
 CI (`.github/workflows/ci.yml`) runs `bun install --frozen-lockfile`, typecheck, test and lint
-on every PR and on pushes to `main`. It does not run `next build`, because the build needs real
-environment variables. `lib/solidity/deploy.ts` reads `DEPLOYER_PRIVATE_KEY` at module load.
+on every PR and on pushes to `main`. It does not run `next build`. The build needs no environment
+variables; the runtime app still requires configuration (see `.env.example`).
 Lefthook runs `bunx ultracite fix` on the staged JS/TS/JSON/CSS files before each commit.
 
 ## Map
@@ -136,7 +136,7 @@ These rules come from real incidents or security fixes. Breaking them reintroduc
   flat file names replaces only the path literal, so aliases and symbol lists survive. Bare npm
   paths (`solmate/…`, `forge-std/…`) resolve through unpkg.
 - The compiler is chosen from every `pragma solidity` in the contract and its imports. The
-  bundled `solc` 0.8.37 (`DEFAULT_COMPILER_VERSION`) is used when it satisfies them. Otherwise
+  bundled `solc` 0.8.38 (`DEFAULT_COMPILER_VERSION`) is used when it satisfies them. Otherwise
   the newest satisfying release is downloaded from binaries.soliditylang.org, checked against its
   published sha256 (refused without one), and cached per version. Versions before 0.4.11 are
   refused.

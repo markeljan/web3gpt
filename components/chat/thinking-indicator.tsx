@@ -17,7 +17,7 @@ export function ThinkingIndicator({ agentImageUrl, agentName }: ThinkingIndicato
         {DOTS.map((dot) => (
           <span
             aria-hidden="true"
-            className="size-1.5 animate-bounce rounded-full bg-muted-foreground/60 motion-reduce:animate-pulse"
+            className="bg-muted-foreground/60 size-1.5 animate-bounce rounded-full motion-reduce:animate-pulse"
             key={dot}
             style={{ animationDelay: `${dot * DOT_DELAY_MS}ms` }}
           />

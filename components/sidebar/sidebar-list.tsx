@@ -14,7 +14,7 @@ export function SidebarList({ chatList }: SidebarListProps) {
   const [, activeChatId] = pathname.split("/chat/")
 
   return (
-    <div className="scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent h-full overflow-y-auto">
+    <div className="scrollbar-thumb-muted h-full scrollbar-thin scrollbar-track-transparent overflow-y-auto">
       {chatList?.length ? (
         <div className="space-y-1 px-2 pb-2">
           {chatList?.map((chat) => (

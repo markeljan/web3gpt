@@ -31,11 +31,12 @@ const RELEASE_VERSIONS = [
   "0.8.29",
   "0.8.30",
   "0.8.37",
-  // Hypothetical release newer than the bundled compiler.
   "0.8.38",
+  // Hypothetical release newer than the bundled compiler.
+  "0.8.39",
 ]
 
-const KNOWN_COMMITS: Record<string, string> = { "0.8.29": "ab55807c", "0.8.37": "f401782d" }
+const KNOWN_COMMITS: Record<string, string> = { "0.8.29": "ab55807c", "0.8.37": "f401782d", "0.8.38": "1835d247" }
 
 const commitFor = (version: string) =>
   KNOWN_COMMITS[version] ?? version.replaceAll(".", "").padStart(8, "0").slice(0, 8)
@@ -48,12 +49,12 @@ const RELEASE_LIST = {
       version,
     })),
     {
-      path: "soljson-v0.8.39-nightly.2026.10.12+commit.9647b150.js",
+      path: "soljson-v0.8.40-nightly.2026.10.12+commit.9647b150.js",
       prerelease: "nightly.2026.10.12",
-      version: "0.8.39",
+      version: "0.8.40",
     },
   ],
-  latestRelease: "0.8.38",
+  latestRelease: "0.8.39",
   releases: Object.fromEntries(
     RELEASE_VERSIONS.map((version) => [version, `soljson-v${version}+commit.${commitFor(version)}.js`])
   ),
@@ -100,35 +101,36 @@ string constant URL = "https://example.com"; pragma solidity ^0.8.0;
 
 describe("compiler version selection", () => {
   test.each([
+    ["previous bundled release", "0.8.37", "0.8.37"],
     ["exact", "0.8.20", "0.8.20"],
     ["exact with =", "=0.8.24", "0.8.24"],
     ["exact old release", "0.4.11", "0.4.11"],
-    ["caret the bundled compiler satisfies", "^0.8.0", "0.8.37"],
-    ["caret above the bundled compiler", "^0.8.38", "0.8.38"],
+    ["caret the bundled compiler satisfies", "^0.8.0", "0.8.38"],
+    ["caret above the bundled compiler", "^0.8.39", "0.8.39"],
     ["caret on 0.x stays in the minor", "^0.4.24", "0.4.26"],
     ["caret on 0.7", "^0.7.0", "0.7.6"],
     ["tilde", "~0.7.0", "0.7.6"],
-    ["tilde the bundled compiler satisfies", "~0.8.19", "0.8.37"],
+    ["tilde the bundled compiler satisfies", "~0.8.19", "0.8.38"],
     ["range", ">=0.7.0 <0.8.0", "0.7.6"],
     ["range with spaces after operators", ">= 0.6.0 < 0.7.0", "0.6.12"],
     ["upper bound below bundled", ">=0.8.0 <0.8.25", "0.8.24"],
     ["the previously bundled compiler, pinned", "0.8.29", "0.8.29"],
-    ["open range", ">=0.4.22", "0.8.37"],
+    ["open range", ">=0.4.22", "0.8.38"],
     ["union", "^0.6.0 || ^0.7.0", "0.7.6"],
-    ["partial version", "0.8", "0.8.37"],
+    ["partial version", "0.8", "0.8.38"],
     ["x-range", "0.7.x", "0.7.6"],
   ])("%s: pragma solidity %s -> %s", (_, range, expected) => {
     expect(resolve({ "Main.sol": pragma(range) })).toBe(expected)
   })
 
   test("files without a pragma use the bundled compiler", () => {
-    expect(resolve({ "Main.sol": "contract C {}" })).toBe("0.8.37")
+    expect(resolve({ "Main.sol": "contract C {}" })).toBe("0.8.38")
   })
 
   test("all pragmas in a file and across files must hold", () => {
     expect(resolve({ "Main.sol": "pragma solidity >=0.8.0;\npragma solidity <0.8.21;" })).toBe("0.8.20")
     expect(resolve({ "Lib.sol": pragma("<0.8.25"), "Main.sol": pragma("^0.8.0") })).toBe("0.8.24")
-    expect(resolve({ "Lib.sol": pragma("^0.8.38"), "Main.sol": pragma("^0.8.0") })).toBe("0.8.38")
+    expect(resolve({ "Lib.sol": pragma("^0.8.39"), "Main.sol": pragma("^0.8.0") })).toBe("0.8.39")
     expect(
       resolve({ "ERC20.sol": pragma("^0.8.20"), "IERC20.sol": pragma(">=0.4.16"), "Main.sol": pragma("0.8.20") })
     ).toBe("0.8.20")
@@ -154,7 +156,7 @@ describe("compiler version selection", () => {
 
   test("a version that was never released is refused", () => {
     expect(() => resolve({ "Main.sol": pragma("0.8.99") })).toThrow(CompilerVersionError)
-    expect(() => resolve({ "Main.sol": pragma("0.8.21") })).toThrow("The newest release is 0.8.38")
+    expect(() => resolve({ "Main.sol": pragma("0.8.21") })).toThrow("The newest release is 0.8.39")
   })
 
   test("versions older than 0.4.11 are refused", () => {
@@ -167,7 +169,7 @@ describe("compiler version selection", () => {
   })
 
   test("without the release list, only the bundled compiler is available", () => {
-    expect(resolve({ "Main.sol": pragma("^0.8.0") }, null)).toBe("0.8.37")
+    expect(resolve({ "Main.sol": pragma("^0.8.0") }, null)).toBe("0.8.38")
     expect(() => resolve({ "Main.sol": pragma("0.8.20") }, null)).toThrow(
       "the list of compiler releases could not be fetched"
     )
@@ -175,7 +177,7 @@ describe("compiler version selection", () => {
 })
 
 // Differential check against the real compiler: for each pragma, the bundled
-// solc must accept the file exactly when our range says 0.8.37 satisfies it.
+// solc must accept the file exactly when our range says 0.8.38 satisfies it.
 // (solc rejects a few things semver accepts, such as a "v" prefix or
 // pre-release tags; solc then reports its own syntax error, so those are left out.)
 describe("pragma semantics match the bundled solc", () => {
@@ -193,29 +195,29 @@ describe("pragma semantics match the bundled solc", () => {
   }
 
   test.each([
-    "0.8.37",
-    "=0.8.37",
+    "0.8.38",
+    "=0.8.38",
     "0.8.36",
     "0.8",
     "0.8.x",
     "*",
     "^0.8.0",
-    "^0.8.38",
+    "^0.8.39",
     "~0.8.0",
-    "~0.8.38",
+    "~0.8.39",
     ">=0.8.0 <0.9.0",
     ">=0.8.0<0.9.0",
     ">= 0.8.0",
     "> 0.8.36",
-    "<0.8.37",
-    "0.8.30 - 0.8.38",
-    "0.8.36 || 0.8.37",
+    "<0.8.38",
+    "0.8.30 - 0.8.39",
+    "0.8.36 || 0.8.38",
     "^0.7.0||^0.8.0",
-    "0.8.37 0.8.37",
-    ">=0.8.38<0.9.0",
+    "0.8.38 0.8.38",
+    ">=0.8.39<0.9.0",
     "^0.7.0",
   ])("pragma solidity %s", (range) => {
-    expect(parseVersionPragma(range, "A.sol").range.test("0.8.37")).toBe(solcAccepts(range))
+    expect(parseVersionPragma(range, "A.sol").range.test("0.8.38")).toBe(solcAccepts(range))
   })
 })
 
@@ -224,7 +226,7 @@ describe("EVM version", () => {
     const evmFor = (version: string) => getEvmVersion({ longVersion: `v${version}+commit.00000000`, version })
     expect(evmFor("0.8.29")).toBe("cancun")
     expect(evmFor("0.8.24")).toBe("cancun")
-    expect(evmFor("0.8.37")).toBe("cancun")
+    expect(evmFor("0.8.38")).toBe("cancun")
     expect(evmFor("0.8.23")).toBeUndefined()
     expect(evmFor("0.4.26")).toBeUndefined()
   })
@@ -233,9 +235,9 @@ describe("EVM version", () => {
 describe("release list parsing", () => {
   test("keeps releases only, newest first, with checksums", () => {
     expect(RELEASES).toHaveLength(RELEASE_VERSIONS.length)
-    expect(RELEASES[0]?.version).toBe("0.8.38")
+    expect(RELEASES[0]?.version).toBe("0.8.39")
     expect(RELEASES.at(-1)?.version).toBe("0.3.6")
-    expect(RELEASES.some(({ version }) => version === "0.8.39")).toBe(false)
+    expect(RELEASES.some(({ version }) => version === "0.8.40")).toBe(false)
   })
 
   test("skips entries that don't look like release files", () => {

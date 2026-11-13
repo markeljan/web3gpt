@@ -59,7 +59,7 @@ export const ChainOfThoughtHeader = memo(({ className, children, ...props }: Cha
     <Collapsible onOpenChange={setIsOpen} open={isOpen}>
       <CollapsibleTrigger
         className={cn(
-          "flex w-full cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-muted-foreground text-sm transition-colors hover:text-foreground",
+          "text-muted-foreground hover:text-foreground flex w-full cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-sm transition-colors",
           className
         )}
         {...props}
@@ -98,12 +98,12 @@ export const ChainOfThoughtStep = memo(
     ...props
   }: ChainOfThoughtStepProps) => (
     <div
-      className={cn("fade-in-0 slide-in-from-top-2 flex animate-in gap-2 text-sm", stepStatusStyles[status], className)}
+      className={cn("fade-in-0 slide-in-from-top-2 animate-in flex gap-2 text-sm", stepStatusStyles[status], className)}
       {...props}
     >
       <div className="relative mt-0.5">
         <Icon className="size-4" />
-        <div className="absolute top-7 bottom-0 left-1/2 -mx-px w-px bg-border" data-chain-line="" />
+        <div className="bg-border absolute top-7 bottom-0 left-1/2 -mx-px w-px" data-chain-line="" />
       </div>
       <div className="flex-1 space-y-2 overflow-hidden">
         <div>{label}</div>
@@ -123,7 +123,7 @@ export const ChainOfThoughtSearchResults = memo(({ className, ...props }: ChainO
 export type ChainOfThoughtSearchResultProps = ComponentProps<typeof Badge>
 
 export const ChainOfThoughtSearchResult = memo(({ className, children, ...props }: ChainOfThoughtSearchResultProps) => (
-  <Badge className={cn("gap-1 px-2 py-0.5 font-normal text-xs", className)} variant="secondary" {...props}>
+  <Badge className={cn("gap-1 px-2 py-0.5 text-xs font-normal", className)} variant="secondary" {...props}>
     {children}
   </Badge>
 ))
@@ -138,7 +138,7 @@ export const ChainOfThoughtContent = memo(({ className, children, ...props }: Ch
       <CollapsibleContent
         className={cn(
           "mt-2 space-y-3",
-          "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground outline-hidden data-[state=closed]:animate-out data-[state=open]:animate-in",
+          "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 text-popover-foreground data-[state=closed]:animate-out data-[state=open]:animate-in outline-hidden",
           className
         )}
         {...props}
@@ -155,7 +155,7 @@ export type ChainOfThoughtImageProps = ComponentProps<"div"> & {
 
 export const ChainOfThoughtImage = memo(({ className, children, caption, ...props }: ChainOfThoughtImageProps) => (
   <div className={cn("mt-2 space-y-2", className)} {...props}>
-    <div className="relative flex max-h-88 items-center justify-center overflow-hidden rounded-lg bg-muted p-3">
+    <div className="bg-muted relative flex max-h-88 items-center justify-center overflow-hidden rounded-lg p-3">
       {children}
     </div>
     {caption ? <p className="text-muted-foreground text-xs">{caption}</p> : null}
