@@ -32,11 +32,34 @@ export function HomeIntro() {
         Base Sepolia, Arbitrum Sepolia, OP Sepolia, Mantle Sepolia, Metis Sepolia or Celo Sepolia. Sources, ABI and
         bytecode are pinned to IPFS.
       </p>
+      <h2>How it works</h2>
+      <ol>
+        <li>Describe the contract you want in plain English, or paste Solidity source into the chat.</li>
+        <li>
+          The agent writes the code, picks the solc version from the pragma, and compiles it, resolving imports from npm
+          and GitHub.
+        </li>
+        <li>
+          Deploy from your own wallet, or let the agent deploy for you. Agent deployments are paid for by Web3GPT and
+          are rate limited.
+        </li>
+        <li>
+          The deployment is recorded once the chain confirms it, and the contract is verified on the block explorer.
+        </li>
+      </ol>
+      <h2>What you can build</h2>
+      <p>
+        Standard tokens such as ERC20, ERC721 and ERC1155, or any custom contract from source. Signed-in users can
+        create custom agents with their own instructions and share them by link. Web3GPT is open source under the MIT
+        license and runs in the browser at w3gpt.ai.
+      </p>
+      <h2>For AI agents</h2>
       <p>
         AI agents can use Web3GPT over a public HTTP API with no account or API key. Start with the{" "}
         <a href="/llms.txt">llms.txt overview</a>, the <a href="/skill.md">skill guide</a>, the{" "}
         <a href="/openapi.json">OpenAPI spec</a> or the <a href="/api-docs">API reference</a>. Every recorded deployment
-        is listed on the <a href="/contracts">contracts dashboard</a>.
+        is listed on the <a href="/contracts">contracts dashboard</a>. Read more <a href="/about">about Web3GPT</a>, how
+        to <a href="/contact">get in touch</a>, or the <a href="/privacy">privacy policy</a>.
       </p>
       <script
         // biome-ignore lint/security/noDangerouslySetInnerHtml: static JSON-LD built from constants above
