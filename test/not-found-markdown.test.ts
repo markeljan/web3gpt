@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { readdirSync, statSync } from "node:fs"
 import { join } from "node:path"
+import { isRewrite } from "next/experimental/testing/server"
+import { NextRequest } from "next/server"
 import { isUnknownPage, KNOWN_SEGMENTS, markdownNotFound } from "@/lib/not-found-markdown"
+import { proxy } from "@/proxy"
 
 describe("markdownNotFound", () => {
   test("is a markdown 404 that links onward", async () => {
@@ -18,6 +21,17 @@ describe("markdownNotFound", () => {
     const body = await markdownNotFound("/a`\n# injected").text()
     expect(body).not.toContain("\n# injected")
   })
+})
+
+test.each([
+  ["GET", "text/markdown", true],
+  ["HEAD", "text/markdown", true],
+  ["POST", "text/markdown", false],
+  ["OPTIONS", "text/markdown", false],
+  ["GET", "text/html", false],
+])("unknown %s request with Accept: %s follows negotiation rules", (method, accept, expected) => {
+  const request = new NextRequest("https://w3gpt.ai/missing", { headers: { accept }, method })
+  expect(isRewrite(proxy(request))).toBe(expected)
 })
 
 describe("isUnknownPage", () => {

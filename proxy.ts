@@ -4,7 +4,7 @@ import { isUnknownPage } from "@/lib/not-found-markdown"
 
 // Content negotiation for agents, only when they send `Accept: text/markdown`:
 // - the homepage returns the markdown guide instead of the HTML app;
-// - a path with no page returns a markdown 404 (status stays 404) instead of the HTML one.
+// - GET and HEAD for a path with no page use the markdown 404 handler.
 // Both carry `Vary: Accept` so a cache never serves them to a browser. The HTML variant
 // needs nothing: it is `no-store` (the layout is dynamic), and Next overwrites Vary on
 // app pages anyway.
@@ -18,7 +18,7 @@ export function proxy(request: NextRequest) {
     response.headers.set("Vary", "Accept")
     return response
   }
-  if (isUnknownPage(pathname)) {
+  if ((request.method === "GET" || request.method === "HEAD") && isUnknownPage(pathname)) {
     const target = new URL("/api/not-found", request.url)
     const response = NextResponse.rewrite(target)
     response.headers.set("Vary", "Accept")
