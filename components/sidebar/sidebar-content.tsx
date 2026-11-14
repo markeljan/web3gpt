@@ -30,9 +30,9 @@ export async function SidebarContent() {
       {/* Agents Section */}
       <div className="shrink-0 p-6 py-2">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-muted-foreground pointer-events-none text-xs font-semibold tracking-wider uppercase select-none">
+          <p className="text-muted-foreground pointer-events-none text-xs font-semibold tracking-wider uppercase select-none">
             Agents
-          </h3>
+          </p>
         </div>
         <div className="overflow-y-auto max-sm:max-h-[108px]">
           <SidebarAgents />
@@ -44,9 +44,9 @@ export async function SidebarContent() {
       {/* Chat History Section - Scrollable */}
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 py-2">
         <div className="mb-3 flex shrink-0 items-center justify-between px-2">
-          <h3 className="text-muted-foreground pointer-events-none text-xs font-semibold tracking-wider uppercase select-none">
+          <p className="text-muted-foreground pointer-events-none text-xs font-semibold tracking-wider uppercase select-none">
             Chats
-          </h3>
+          </p>
         </div>
 
         <div className="min-h-0 flex-1 overflow-hidden">
@@ -81,6 +81,9 @@ export async function SidebarContent() {
         <nav className="text-muted-foreground mt-3 flex justify-center gap-4 text-xs">
           <a className="hover:text-foreground" href="/about">
             About
+          </a>
+          <a className="hover:text-foreground" href="/contact">
+            Contact
           </a>
           <a className="hover:text-foreground" href="/privacy">
             Privacy

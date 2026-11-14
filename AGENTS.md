@@ -72,7 +72,7 @@ Lefthook runs `bunx ultracite fix` on the staged JS/TS/JSON/CSS files before eac
   - `chat-ownership.ts`: ownership rules for stored chats
   - `auth.ts` (server), `auth-client.ts` (browser)
 - `public/skill.md`, `public/openapi.json`: public API docs (keep both in sync with `api/skill`).
-  `proxy.ts` serves `skill.md` for `/` when a client sends `Accept: text/markdown`.
+  `proxy.ts` serves `skill.md` for `/` when a client sends `Accept: text/markdown`, and a markdown 404 (still status 404, via `app/api/not-found`) for paths with no page. New top-level pages must be added to `KNOWN_SEGMENTS` in `lib/not-found-markdown.ts` (a test enforces it).
   `public/llms.txt` is the entry point that links to them; update it when chains, limits or
   endpoints change.
 - `test/`: unit tests
