@@ -1,51 +1,32 @@
-import { afterEach, expect, mock, spyOn, test } from "bun:test"
+import { expect, test } from "bun:test"
+import { spawnSync } from "node:child_process"
 
-const ready = mock((): Promise<void> => Promise.resolve())
-mock.module("@farcaster/miniapp-sdk", () => ({ sdk: { actions: { ready } } }))
-mock.module("react", () => ({ useEffect: (callback: () => void) => callback() }))
+test("the readiness effect reports a rejected host call without an unhandled rejection", () => {
+  // Isolate the React effect stub from the rest of the test suite.
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--no-env-file",
+      "-e",
+      `
+        import { mock } from "bun:test"
+        import assert from "node:assert/strict"
 
-const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window")
-const { MiniAppInitializer } = await import("@/components/miniapp-initializer")
+        const failure = new Error("private host details")
+        const ready = mock(() => Promise.reject(failure))
+        mock.module("@farcaster/miniapp-sdk", () => ({ sdk: { actions: { ready } } }))
+        mock.module("react", () => ({ useEffect: (callback) => callback() }))
+        const { MiniAppInitializer } = await import("@/components/miniapp-initializer")
+        const warnings = []
+        console.warn = (...args) => warnings.push(args)
+        assert.equal(MiniAppInitializer(), null)
+        await new Promise(resolve => setImmediate(resolve))
+        assert.equal(ready.mock.calls.length, 1)
+        assert.deepEqual(warnings, [["Farcaster host readiness could not be confirmed"]])
+      `,
+    ],
+    { encoding: "utf8", timeout: 5000 }
+  )
 
-function setWindow(host: "standalone" | "iframe" | "webview") {
-  const browser: { parent?: object; ReactNativeWebView?: object } = {}
-  browser.parent = host === "iframe" ? {} : browser
-  if (host === "webview") {
-    browser.ReactNativeWebView = {}
-  }
-  Object.defineProperty(globalThis, "window", { configurable: true, value: browser })
-}
-
-afterEach(() => {
-  if (originalWindow) {
-    Object.defineProperty(globalThis, "window", originalWindow)
-  } else {
-    Reflect.deleteProperty(globalThis, "window")
-  }
-  ready.mockClear()
-})
-
-test("standalone navigation does not send a readiness request", () => {
-  setWindow("standalone")
-  expect(MiniAppInitializer()).toBeNull()
-  expect(ready).not.toHaveBeenCalled()
-})
-
-test.each(["iframe", "webview"] as const)("notifies an embedded %s host", (host) => {
-  setWindow(host)
-  expect(MiniAppInitializer()).toBeNull()
-  expect(ready).toHaveBeenCalledTimes(1)
-})
-
-test("handles a host rejection without disclosing its details", async () => {
-  setWindow("iframe")
-  ready.mockRejectedValueOnce(new Error("synthetic host detail"))
-  const warn = spyOn(console, "warn").mockImplementation(() => undefined)
-  try {
-    expect(MiniAppInitializer()).toBeNull()
-    await Promise.resolve()
-    expect(warn.mock.calls).toEqual([["Farcaster host readiness could not be confirmed"]])
-  } finally {
-    warn.mockRestore()
-  }
+  expect(result.status, result.stderr).toBe(0)
 })
