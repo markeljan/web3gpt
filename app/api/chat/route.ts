@@ -1,4 +1,11 @@
-import { consumeStream, createUIMessageStreamResponse, generateId, toUIMessageStream, type UIMessage } from "ai"
+import {
+  consumeStream,
+  createUIMessageStreamResponse,
+  generateId,
+  safeValidateUIMessages,
+  toUIMessageStream,
+  type UIMessage,
+} from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 import { streamAgentReply } from "@/lib/agent-chat"
 import { getSession } from "@/lib/auth"
@@ -68,6 +75,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "messages and agentId are required" }, { status: 400 })
   }
   const { messages, chatId, agentId } = body
+
+  // Validate every entry before model conversion, but retain the original history.
+  const validation = await safeValidateUIMessages({ messages })
+  if (!validation.success) {
+    return NextResponse.json({ error: "Invalid messages" }, { status: 400 })
+  }
 
   // Chat ids are chosen by the client and published ones are public. Refuse to
   // continue someone else's chat up front, before any tokens are spent;
