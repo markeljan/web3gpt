@@ -90,7 +90,11 @@ export default function AboutPage() {
           </li>
         </ul>
         <p>
-          See the{" "}
+          More on the{" "}
+          <a className={linkClass} href="/contact">
+            contact page
+          </a>
+          . See the{" "}
           <a className={linkClass} href="/privacy">
             privacy policy
           </a>{" "}

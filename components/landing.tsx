@@ -30,7 +30,7 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
               speed={0.5}
             />
             <div className="text-left">
-              <h3 className="text-sm font-medium">Generate</h3>
+              <h2 className="text-sm font-medium">Generate</h2>
               <p className="text-xs text-gray-600 dark:text-gray-400">Prompt smart contracts</p>
             </div>
           </div>
@@ -44,7 +44,7 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
               speed={0.5}
             />
             <div className="text-left">
-              <h3 className="text-sm font-medium">Speed up</h3>
+              <h2 className="text-sm font-medium">Speed up</h2>
               <p className="text-xs text-gray-600 dark:text-gray-400">Skip the boilerplate</p>
             </div>
           </div>
@@ -59,7 +59,7 @@ export function Landing({ userId, disableAnimations }: LandingProps) {
               speed={0.5}
             />
             <div className="text-left">
-              <h3 className="text-sm font-medium">Deploy</h3>
+              <h2 className="text-sm font-medium">Deploy</h2>
               <p className="text-xs text-gray-600 dark:text-gray-400">Directly from chat</p>
             </div>
           </div>

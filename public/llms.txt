@@ -37,5 +37,8 @@ Don't use it for:
 
 ## Optional
 
+- [About](https://w3gpt.ai/about): what Web3GPT is and who maintains it
+- [Contact](https://w3gpt.ai/contact): report a bug or ask a question
+- [Privacy policy](https://w3gpt.ai/privacy)
 - [Source code](https://github.com/markeljan/web3gpt)
 - [Browser app](https://w3gpt.ai)
