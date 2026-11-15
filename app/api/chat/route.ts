@@ -8,11 +8,13 @@ import {
 } from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 import { streamAgentReply } from "@/lib/agent-chat"
+import { MODEL_QUOTA_ERROR_MESSAGE } from "@/lib/ai-model"
 import { getSession } from "@/lib/auth"
 import { canWriteChat } from "@/lib/chat-ownership"
 import { buildChatTitle } from "@/lib/chat-utils"
 import { getChatOwnerId, storeChat } from "@/lib/data/kv"
 import { getCallerId } from "@/lib/deploy-limits"
+import { isModelQuotaError } from "@/lib/model-quota"
 import { getClientIp, hitRateLimit, LIMITS, rateLimitHeaders } from "@/lib/rate-limit"
 import type { DbChat } from "@/lib/types"
 
@@ -122,6 +124,7 @@ export async function POST(request: NextRequest) {
 
       await storeChat({ data: chat, userId })
     },
+    onError: (error) => (isModelQuotaError(error) ? MODEL_QUOTA_ERROR_MESSAGE : "An error occurred."),
     originalMessages: messages,
     sendReasoning: true,
     stream: result.stream,

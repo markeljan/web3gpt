@@ -16,4 +16,6 @@ export const DEFAULT_AI_MODEL = "gpt-6.1-terra"
 
 export const AI_REASONING_EFFORT = "medium"
 
+export const MODEL_QUOTA_ERROR_MESSAGE = "The model provider's usage limit has been reached."
+
 export const getAiModel = (): string => process.env.AI_MODEL?.trim() || DEFAULT_AI_MODEL

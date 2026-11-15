@@ -4,6 +4,7 @@ import { RefreshCw, TriangleAlert } from "lucide-react"
 import { ButtonScrollToBottom } from "@/components/chat/button-scroll-to-bottom"
 import { PromptForm } from "@/components/chat/prompt-form"
 import { Button } from "@/components/ui/button"
+import { MODEL_QUOTA_ERROR_MESSAGE } from "@/lib/ai-model"
 
 export type ChatPanelProps = {
   onSubmit: (text: string) => void
@@ -16,6 +17,7 @@ export type ChatPanelProps = {
 }
 
 export function ChatPanel({ isLoading, isEmpty, error, onSubmit, onRetry, stop, onNewChat }: ChatPanelProps) {
+  const quotaExhausted = error?.message === MODEL_QUOTA_ERROR_MESSAGE
   return (
     <div className="bg-background relative shrink-0">
       {/* Fades the last line of the transcript into the composer instead of cutting it off. */}
@@ -31,11 +33,15 @@ export function ChatPanel({ isLoading, isEmpty, error, onSubmit, onRetry, stop, 
             role="alert"
           >
             <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-            <span className="min-w-0 flex-1">Something went wrong generating that response.</span>
-            <Button className="h-7 shrink-0 gap-1.5 px-2" onClick={() => onRetry()} size="sm" variant="ghost">
-              <RefreshCw aria-hidden="true" className="size-3.5" />
-              Retry
-            </Button>
+            <span className="min-w-0 flex-1">
+              {quotaExhausted ? MODEL_QUOTA_ERROR_MESSAGE : "Something went wrong generating that response."}
+            </span>
+            {quotaExhausted ? null : (
+              <Button className="h-7 shrink-0 gap-1.5 px-2" onClick={() => onRetry()} size="sm" variant="ghost">
+                <RefreshCw aria-hidden="true" className="size-3.5" />
+                Retry
+              </Button>
+            )}
           </div>
         ) : null}
         <PromptForm isEmpty={isEmpty} isLoading={isLoading} onNewChat={onNewChat} onSubmit={onSubmit} stop={stop} />
