@@ -1,11 +1,20 @@
-import { consumeStream, createUIMessageStreamResponse, generateId, toUIMessageStream, type UIMessage } from "ai"
+import {
+  consumeStream,
+  createUIMessageStreamResponse,
+  generateId,
+  safeValidateUIMessages,
+  toUIMessageStream,
+  type UIMessage,
+} from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 import { streamAgentReply } from "@/lib/agent-chat"
+import { MODEL_QUOTA_ERROR_MESSAGE } from "@/lib/ai-model"
 import { getSession } from "@/lib/auth"
 import { canWriteChat } from "@/lib/chat-ownership"
 import { buildChatTitle } from "@/lib/chat-utils"
 import { getChatOwnerId, storeChat } from "@/lib/data/kv"
 import { getCallerId } from "@/lib/deploy-limits"
+import { isModelQuotaError } from "@/lib/model-quota"
 import { getClientIp, hitRateLimit, LIMITS, rateLimitHeaders } from "@/lib/rate-limit"
 import type { DbChat } from "@/lib/types"
 
@@ -69,6 +78,12 @@ export async function POST(request: NextRequest) {
   }
   const { messages, chatId, agentId } = body
 
+  // Validate every entry before model conversion, but retain the original history.
+  const validation = await safeValidateUIMessages({ messages })
+  if (!validation.success) {
+    return NextResponse.json({ error: "Invalid messages" }, { status: 400 })
+  }
+
   // Chat ids are chosen by the client and published ones are public. Refuse to
   // continue someone else's chat up front, before any tokens are spent;
   // `storeChat` enforces the same rule again at write time.
@@ -109,6 +124,7 @@ export async function POST(request: NextRequest) {
 
       await storeChat({ data: chat, userId })
     },
+    onError: (error) => (isModelQuotaError(error) ? MODEL_QUOTA_ERROR_MESSAGE : "An error occurred."),
     originalMessages: messages,
     sendReasoning: true,
     stream: result.stream,

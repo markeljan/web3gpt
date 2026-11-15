@@ -116,6 +116,7 @@ Every error is JSON: `{ "code": "...", "error": "..." }`, plus `chatId` when one
 | `413` | `message_too_long` | `message` longer than 50,000 characters |
 | `429` | `rate_limited` | Rate limited; see `Retry-After` |
 | `500` | `internal_error` | The agent failed to answer. If you had asked for a deployment, check `https://w3gpt.ai/contracts` (or ask in the same chat) before retrying, so you don't deploy twice. |
+| `503` | `model_quota_exhausted` | Web3GPT has reached its model provider's usage quota. Wait for service quota to be restored. Check existing deployments before resending a deployment request. |
 
 ## Versioning
 

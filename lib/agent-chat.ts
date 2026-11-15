@@ -1,8 +1,9 @@
 import { type OpenAIResponsesProviderOptions, openai } from "@ai-sdk/openai"
-import { convertToModelMessages, generateText, isStepCount, streamText, type UIMessage } from "ai"
+import { convertToModelMessages, generateText, isStepCount, streamText, type UIMessage, wrapLanguageModel } from "ai"
 import { AI_REASONING_EFFORT, getAiModel } from "@/lib/ai-model"
 import { AGENT_DEPLOY_CHAINS, DEFAULT_AGENT, DEFAULT_COMPILER_VERSION, DEFAULT_TOOL_NAMES } from "@/lib/constants"
 import { getAgentById } from "@/lib/data/agents"
+import { modelQuotaMiddleware } from "@/lib/model-quota"
 import { getTools } from "@/lib/tools"
 
 type AgentChatParams = {
@@ -19,6 +20,8 @@ const providerOptions = {
     reasoningSummary: "concise",
   } satisfies OpenAIResponsesProviderOptions,
 }
+
+const getAgentModel = () => wrapLanguageModel({ middleware: modelQuotaMiddleware, model: openai(getAiModel()) })
 
 /**
  * How much history the model sees. Clients send the whole conversation every
@@ -67,7 +70,7 @@ export const generateAgentReply = async ({ agentId, messages, userId, callerId }
   const result = await generateText({
     instructions: systemPrompt,
     messages: await convertToModelMessages(toModelWindow(messages)),
-    model: openai(getAiModel()),
+    model: getAgentModel(),
     providerOptions,
     stopWhen: isStepCount(5),
     tools,
@@ -82,7 +85,7 @@ export const streamAgentReply = async ({ agentId, messages, userId, callerId }: 
   const result = streamText({
     instructions: systemPrompt,
     messages: await convertToModelMessages(toModelWindow(messages)),
-    model: openai(getAiModel()),
+    model: getAgentModel(),
     providerOptions,
     stopWhen: isStepCount(5),
     tools,

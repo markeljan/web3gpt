@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import type { UIMessage } from "ai"
-import { simulateReadableStream } from "ai"
+import { convertToModelMessages, simulateReadableStream } from "ai"
 import { MockLanguageModelV4 } from "ai/test"
 
 // Drives the real /api/chat handler with a scripted model: the first model step
@@ -112,6 +112,17 @@ beforeEach(() => {
 })
 
 describe("/api/chat persistence", () => {
+  test("rejects missing parts before agent lookup or persistence", async () => {
+    const messages = [{ id: "u1", role: "user" }] as UIMessage[]
+    // This reproduces a matching SDK failure, not proof of the production payload.
+    await expect(convertToModelMessages(messages)).rejects.toBeInstanceOf(TypeError)
+    const response = await postChat({ agentId: "agent_web3gpt", chatId: "bad", messages })
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: "Invalid messages" })
+    expect(model.doStreamCalls).toHaveLength(0)
+    expect(stored).toHaveLength(0)
+  })
+
   test("stores the tool call and its result alongside the text", async () => {
     const response = await postChat({ agentId: "agent_web3gpt", chatId: "chat-1", messages: [userMessage] })
     expect(response.status).toBe(200)
