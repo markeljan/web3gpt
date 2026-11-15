@@ -165,7 +165,8 @@
               "message_too_long",
               "rate_limited",
               "not_found",
-              "internal_error"
+              "internal_error",
+              "model_quota_exhausted"
             ]
           },
           "error": {
@@ -301,6 +302,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The service has reached its model provider's usage quota. Wait for the quota to be restored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       },
@@ -389,6 +400,16 @@
           },
           "500": {
             "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The service has reached its model provider's usage quota. Wait for the quota to be restored.",
             "content": {
               "application/json": {
                 "schema": {

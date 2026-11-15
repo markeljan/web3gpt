@@ -1,6 +1,7 @@
 import { generateId } from "ai"
 import { type NextRequest, NextResponse } from "next/server"
 import { generateAgentReply } from "@/lib/agent-chat"
+import { MODEL_QUOTA_ERROR_MESSAGE } from "@/lib/ai-model"
 import {
   buildChatTitle,
   createTextMessage,
@@ -12,6 +13,7 @@ import { DEFAULT_AGENT_ID } from "@/lib/constants"
 import { getAgentById } from "@/lib/data/agents"
 import { getSkillChat, storeSkillChat } from "@/lib/data/kv"
 import { getCallerId } from "@/lib/deploy-limits"
+import { isModelQuotaError } from "@/lib/model-quota"
 import { getClientIp, hitRateLimits, LIMITS, RATE_LIMIT_HEADER_NAMES, rateLimitHeaders } from "@/lib/rate-limit"
 import type { SkillChat } from "@/lib/types"
 
@@ -101,6 +103,11 @@ const json = (body: unknown, init?: ResponseInit) => {
     headers,
   })
 }
+
+const skillFailure = (error: unknown) =>
+  isModelQuotaError(error)
+    ? { code: "model_quota_exhausted", error: MODEL_QUOTA_ERROR_MESSAGE, status: 503 }
+    : { code: "internal_error", error: "Failed to complete skill request", status: 500 }
 
 async function handleSkillRequest(request: NextRequest) {
   let payload: SkillRequest
@@ -225,15 +232,8 @@ async function handleSkillRequest(request: NextRequest) {
   } catch (error) {
     // Log the detail server-side; provider and RPC errors can carry internals.
     console.error("skill request failed", { chatId, error })
-    return json(
-      {
-        agentId: activeAgentId,
-        chatId,
-        code: "internal_error",
-        error: "Failed to complete skill request",
-      },
-      { headers, status: 500 }
-    )
+    const { status, ...failure } = skillFailure(error)
+    return json({ agentId: activeAgentId, chatId, ...failure }, { headers, status })
   }
 }
 
