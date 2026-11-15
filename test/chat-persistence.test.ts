@@ -160,3 +160,94 @@ describe("/api/chat persistence", () => {
     expect(stored).toHaveLength(0)
   })
 })
+
+const CHAT_BODY_LIMIT = 1_000_000
+
+const paddedChat = (byteLength: number, text: string) => {
+  const json = JSON.stringify({
+    agentId: "agent_web3gpt",
+    messages: [{ ...userMessage, parts: [{ text, type: "text" }] }],
+  })
+  const bytes = new Uint8Array(byteLength).fill(32) // Trailing JSON whitespace
+  bytes.set(new TextEncoder().encode(json))
+  return bytes
+}
+
+const streamedChat = (chunks: Uint8Array[], cancel?: () => Promise<void>, contentLength?: string) => {
+  const remaining = chunks.values()
+  const pull = mock((controller: ReadableStreamDefaultController<Uint8Array>) => {
+    const next = remaining.next()
+    if (next.done) {
+      controller.close()
+    } else {
+      controller.enqueue(next.value)
+    }
+  })
+  const headers = new Headers({ "content-type": "application/json" })
+  if (contentLength !== undefined) {
+    headers.set("content-length", contentLength)
+  }
+  const body = new ReadableStream({ cancel, pull }, { highWaterMark: 0 })
+  const options = { body, duplex: "half", headers, method: "POST" } as const
+  const request = new Request("http://localhost/api/chat", options) as never
+  return { pull, request }
+}
+
+describe("/api/chat body limit", () => {
+  test("accepts exactly one million bytes with a UTF-8 character split across chunks", async () => {
+    const text = "Launch 🚀"
+    const bytes = paddedChat(CHAT_BODY_LIMIT, text)
+    const split = bytes.indexOf(0xf0) + 2
+    const { request } = streamedChat([bytes.subarray(0, split), bytes.subarray(split)])
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(200)
+    await response.text()
+    expect(model.doStreamCalls[0]?.prompt.at(-1)?.content).toMatchObject([{ text, type: "text" }])
+  })
+
+  test.each([
+    ["ASCII with no declared length", "Launch", undefined],
+    ["UTF-8 with no declared length", "Launch 🚀", undefined],
+    ["UTF-8 with an underreported length", "Launch 🚀", "100"],
+  ])("rejects %s on the first byte over the limit", async (_label, text, contentLength) => {
+    const cancellation = Promise.withResolvers<void>()
+    const cancel = mock(() => cancellation.promise)
+    const bytes = paddedChat(CHAT_BODY_LIMIT, text)
+    const { pull, request } = streamedChat([bytes, Uint8Array.of(32), Uint8Array.of(32)], cancel, contentLength)
+
+    try {
+      const response = await POST(request)
+
+      expect(response.status).toBe(413)
+      expect(await response.json()).toEqual({ error: "Conversation is too large" })
+      expect(pull).toHaveBeenCalledTimes(2)
+      expect(cancel).toHaveBeenCalledTimes(1)
+      expect(model.doStreamCalls).toHaveLength(0)
+    } finally {
+      cancellation.resolve()
+    }
+  })
+
+  test("rejects an oversized declared length without pulling the body", async () => {
+    const { pull, request } = streamedChat([Uint8Array.of(32)], undefined, String(CHAT_BODY_LIMIT + 1))
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(413)
+    expect(await response.json()).toEqual({ error: "Conversation is too large" })
+    expect(pull).not.toHaveBeenCalled()
+    expect(model.doStreamCalls).toHaveLength(0)
+  })
+
+  test("retains the malformed JSON response for streamed bodies", async () => {
+    const { request } = streamedChat([new TextEncoder().encode('{"agentId":')])
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toEqual({ error: "messages and agentId are required" })
+    expect(model.doStreamCalls).toHaveLength(0)
+  })
+})

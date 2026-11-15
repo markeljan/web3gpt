@@ -33,6 +33,37 @@ type ChatRequestBody = {
   agentId: string
 }
 
+const readChatBody = async (body: ReadableStream<Uint8Array> | null): Promise<string | null> => {
+  if (!body) {
+    return ""
+  }
+
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let bytes = 0
+  let raw = ""
+  try {
+    for (;;) {
+      // biome-ignore lint/performance/noAwaitInLoops: check each chunk before pulling the next one
+      const { done, value } = await reader.read()
+      if (done) {
+        return raw + decoder.decode()
+      }
+
+      bytes += value.byteLength
+      if (bytes > MAX_BODY_BYTES) {
+        // The source can delay or reject cancellation. Return the 413 immediately.
+        reader.cancel().catch(() => undefined)
+        return null
+      }
+
+      raw += decoder.decode(value, { stream: true })
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 const parseBody = (raw: string): ChatRequestBody | null => {
   try {
     const body = JSON.parse(raw) as Partial<ChatRequestBody> | null
@@ -67,8 +98,8 @@ export async function POST(request: NextRequest) {
   if (declaredLength > MAX_BODY_BYTES) {
     return NextResponse.json({ error: "Conversation is too large" }, { status: 413 })
   }
-  const raw = await request.text()
-  if (raw.length > MAX_BODY_BYTES) {
+  const raw = await readChatBody(request.body)
+  if (raw === null) {
     return NextResponse.json({ error: "Conversation is too large" }, { status: 413 })
   }
 
