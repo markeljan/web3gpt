@@ -92,4 +92,14 @@ describe("deployment chain filters", () => {
     expect(parseDeploymentChainFilter(undefined)).toBeNull()
     expect(parseDeploymentChainFilter("ethereum")).toBeNull()
   })
+
+  test.each(["constructor", "__proto__"])("rejects inherited alias %s", (alias) => {
+    expect(parseDeploymentChainFilter(alias)).toBeNull()
+  })
+
+  test("uses only the first query value and matches aliases case-insensitively", () => {
+    expect(parseDeploymentChainFilter(["Polygon", "amoy"])).toBe(137)
+    expect(parseDeploymentChainFilter(["CONSTRUCTOR", "polygon"])).toBeNull()
+    expect(parseDeploymentChainFilter([])).toBeNull()
+  })
 })
