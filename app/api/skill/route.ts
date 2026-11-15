@@ -1,5 +1,6 @@
 import { generateId } from "ai"
 import { type NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 import { generateAgentReply } from "@/lib/agent-chat"
 import { MODEL_QUOTA_ERROR_MESSAGE } from "@/lib/ai-model"
 import {
@@ -31,14 +32,18 @@ const CORS_HEADERS = {
 const MAX_MESSAGE_CHARS = 50_000
 const CHAT_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/u
 
-type SkillRequest = {
-  agentId?: string
-  chatId?: string
-  message?: string
-  prompt?: string
-  history?: boolean
-  full?: boolean
-}
+const bodyString = z.string().nullish()
+const bodyFlag = z.union([z.boolean(), z.string()]).nullish()
+const skillRequestBody = z.object({
+  agentId: bodyString,
+  chatId: bodyString,
+  full: bodyFlag,
+  history: bodyFlag,
+  message: bodyString,
+  prompt: bodyString,
+})
+
+type SkillRequestBody = z.infer<typeof skillRequestBody>
 
 const parseBoolean = (value: boolean | string | null | undefined): boolean => {
   if (typeof value === "boolean") {
@@ -51,7 +56,7 @@ const parseBoolean = (value: boolean | string | null | undefined): boolean => {
 class InvalidBodyError extends Error {}
 
 /** Reads the POST body. An empty body is allowed (it starts a chat); anything else must be a JSON object. */
-const readBody = async (request: NextRequest): Promise<SkillRequest> => {
+const readBody = async (request: NextRequest): Promise<SkillRequestBody> => {
   if (request.method !== "POST") {
     return {}
   }
@@ -72,10 +77,16 @@ const readBody = async (request: NextRequest): Promise<SkillRequest> => {
     throw new InvalidBodyError("Request body must be a JSON object")
   }
 
-  return body as SkillRequest
+  const parsed = skillRequestBody.safeParse(body)
+  if (!parsed.success) {
+    const field = parsed.error.issues[0]?.path[0]
+    const expected = field === "full" || field === "history" ? "a boolean or string" : "a string"
+    throw new InvalidBodyError(`${String(field)} must be ${expected} or null`)
+  }
+  return parsed.data
 }
 
-const getRequestPayload = async (request: NextRequest): Promise<SkillRequest> => {
+const getRequestPayload = async (request: NextRequest) => {
   const body = await readBody(request)
   const { searchParams } = request.nextUrl
 
@@ -110,7 +121,7 @@ const skillFailure = (error: unknown) =>
     : { code: "internal_error", error: "Failed to complete skill request", status: 500 }
 
 async function handleSkillRequest(request: NextRequest) {
-  let payload: SkillRequest
+  let payload: Awaited<ReturnType<typeof getRequestPayload>>
   try {
     payload = await getRequestPayload(request)
   } catch (error) {
