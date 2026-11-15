@@ -6,6 +6,10 @@ import { beforeEach, describe, expect, mock, test } from "bun:test"
 const saved: unknown[] = []
 const increment = mock(() => Promise.resolve(1))
 const getSkillChat = mock(() => Promise.resolve(null))
+const storeSkillChat = mock((chat: unknown) => {
+  saved.push(chat)
+  return Promise.resolve()
+})
 const generateAgentReply = mock(() =>
   Promise.resolve({
     result: { finalStep: { toolResults: [] }, responseMessages: [{ content: "Fixture answer", role: "assistant" }] },
@@ -23,10 +27,7 @@ mock.module("@/lib/data/agents", () => ({
 mock.module("@/lib/data/kv", () => ({
   getSkillChat,
   storeAgentDirect: () => Promise.resolve(),
-  storeSkillChat: (chat: unknown) => {
-    saved.push(chat)
-    return Promise.resolve()
-  },
+  storeSkillChat,
 }))
 mock.module("@/lib/deploy-limits", () => ({
   checkDeployAllowance: () => Promise.resolve({ ok: true }),
@@ -34,7 +35,7 @@ mock.module("@/lib/deploy-limits", () => ({
 }))
 mock.module("@/lib/solidity/deploy", () => ({ deployContract: () => Promise.reject(new Error("not called")) }))
 
-const { POST } = await import("@/app/api/skill/route")
+const { GET, POST } = await import("@/app/api/skill/route")
 const { GET: notFound } = await import("@/app/api/[...path]/route")
 
 const post = (body: string, query = "") => {
@@ -51,10 +52,44 @@ beforeEach(() => {
   saved.length = 0
   increment.mockClear()
   getSkillChat.mockClear()
+  storeSkillChat.mockClear()
   generateAgentReply.mockClear()
 })
 
 describe("/api/skill errors", () => {
+  async function expectSessionError(response: Response, chatId: string) {
+    expect(response.status).toBe(500)
+    expect(response.headers.get("Content-Type")).toContain("application/json")
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*")
+    expect(Number(response.headers.get("RateLimit-Limit"))).toBeGreaterThan(0)
+    expect(response.headers.has("RateLimit-Remaining")).toBe(true)
+    expect(await response.json()).toEqual({
+      chatId,
+      code: "internal_error",
+      error: "Failed to complete skill request",
+    })
+    expect(generateAgentReply).not.toHaveBeenCalled()
+    expect(saved).toHaveLength(0)
+  }
+
+  test.each([new Error("private datastore detail"), new DOMException("private transport abort detail", "AbortError")])(
+    "GET returns a sanitized JSON error when reading the session fails",
+    async (error) => {
+      getSkillChat.mockRejectedValueOnce(error)
+      const request = new Request("http://localhost/api/skill?chatId=fixture-read")
+      Object.assign(request, { nextUrl: new URL(request.url) })
+      await expectSessionError(await GET(request as never), "fixture-read")
+      expect(storeSkillChat).not.toHaveBeenCalled()
+    }
+  )
+
+  test("empty POST returns a sanitized JSON error when creating the chat fails", async () => {
+    storeSkillChat.mockRejectedValueOnce(new Error("private datastore detail"))
+    await expectSessionError(await post("", "?chatId=fixture-write"), "fixture-write")
+    expect(getSkillChat).toHaveBeenCalledTimes(1)
+    expect(storeSkillChat).toHaveBeenCalledTimes(1)
+  })
+
   test("malformed JSON is a 400 and creates no chat", async () => {
     const response = await post("{bad")
     expect(response.status).toBe(400)
