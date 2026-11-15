@@ -115,10 +115,12 @@ const json = (body: unknown, init?: ResponseInit) => {
   })
 }
 
+const internalError = { code: "internal_error", error: "Failed to complete skill request" }
+
 const skillFailure = (error: unknown) =>
   isModelQuotaError(error)
     ? { code: "model_quota_exhausted", error: MODEL_QUOTA_ERROR_MESSAGE, status: 503 }
-    : { code: "internal_error", error: "Failed to complete skill request", status: 500 }
+    : { ...internalError, status: 500 }
 
 async function handleSkillRequest(request: NextRequest) {
   let payload: Awaited<ReturnType<typeof getRequestPayload>>
@@ -172,37 +174,53 @@ async function handleSkillRequest(request: NextRequest) {
   // Every response from here on reports the remaining quota.
   const headers = rateLimitHeaders(limit)
 
-  const existingChat = await getSkillChat(chatId)
+  let activeAgentId: string
+  let session: SkillChat
+  let operation = "read_chat"
+  try {
+    const existingChat = await getSkillChat(chatId)
 
-  // An existing chat keeps its agent. A new chat may name one, but an unknown id
-  // must not silently fall back to the default agent.
-  if (!existingChat && payload.agentId && (await getAgentById(payload.agentId)).id !== payload.agentId) {
-    return json({ chatId, code: "agent_not_found", error: `No agent with id "${payload.agentId}"` }, { status: 404 })
-  }
-
-  const activeAgentId = existingChat?.agentId || requestedAgentId
-  const session: SkillChat = existingChat || {
-    agentId: activeAgentId,
-    createdAt: Date.now(),
-    id: chatId,
-    messages: [],
-    title: "Skill Chat",
-  }
-
-  if (!message) {
-    if (!existingChat) {
-      await storeSkillChat(session)
+    // An existing chat keeps its agent. A new chat may name one, but an unknown id
+    // must not silently fall back to the default agent.
+    if (!existingChat && payload.agentId) {
+      operation = "read_agent"
+      if ((await getAgentById(payload.agentId)).id !== payload.agentId) {
+        return json(
+          { chatId, code: "agent_not_found", error: `No agent with id "${payload.agentId}"` },
+          { status: 404 }
+        )
+      }
     }
 
-    return json(
-      {
-        agentId: activeAgentId,
-        chatId,
-        history: includeHistory ? toHistoryItems(session.messages) : undefined,
-        response: getLatestAssistantText(session.messages),
-      },
-      { headers }
-    )
+    activeAgentId = existingChat?.agentId || requestedAgentId
+    session = existingChat || {
+      agentId: activeAgentId,
+      createdAt: Date.now(),
+      id: chatId,
+      messages: [],
+      title: "Skill Chat",
+    }
+
+    if (!message) {
+      if (!existingChat) {
+        operation = "create_chat"
+        await storeSkillChat(session)
+      }
+
+      return json(
+        {
+          agentId: activeAgentId,
+          chatId,
+          history: includeHistory ? toHistoryItems(session.messages) : undefined,
+          response: getLatestAssistantText(session.messages),
+        },
+        { headers }
+      )
+    }
+  } catch {
+    // The chat ID is a capability and datastore errors can contain private connection detail.
+    console.error("skill session request failed", { operation })
+    return json({ chatId, ...internalError }, { headers, status: 500 })
   }
 
   try {
