@@ -44,7 +44,9 @@ Pass these as JSON body fields (`POST`) or query parameters.
 | `chatId` | Continue this conversation. 1–64 characters of `A-Z a-z 0-9 _ -`. Omit it to start a new chat. |
 | `message` | Your message (alias: `prompt`). Up to 50,000 characters. Omit it to just create or read a chat. |
 | `agentId` | Use a different Web3GPT agent for a new chat (e.g. a custom agent from `w3gpt.ai/?a=<agentId>`). An unknown id is a `404`. Ignored for existing chats. |
-| `history` | `true` to include the whole conversation as `history: [{ id, role, text }]` (alias: `full`). |
+| `history` | `true` to include the whole conversation as `history: [{ id, role, text }]` (alias: `full`). The strings `"true"` and `"1"` also enable it. |
+
+In a JSON body, use strings for `chatId`, `agentId`, `message`, and `prompt`, and booleans or strings for `history` and `full`. A `null` value acts like an omitted field.
 
 ## Response
 
@@ -109,7 +111,7 @@ Every error is JSON: `{ "code": "...", "error": "..." }`, plus `chatId` when one
 
 | Status | `code` | Meaning |
 | --- | --- | --- |
-| `400` | `invalid_body` | The `POST` body is not a JSON object |
+| `400` | `invalid_body` | The `POST` body is malformed JSON, a non-object JSON value, or contains a known field with the wrong type |
 | `400` | `invalid_chat_id` | Invalid `chatId` |
 | `404` | `agent_not_found` | `agentId` names no agent |
 | `404` | `not_found` | No API route at that path |

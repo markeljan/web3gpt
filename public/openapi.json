@@ -22,24 +22,38 @@
         "properties": {
           "agentId": {
             "type": "string",
+            "nullable": true,
             "description": "Optional agent ID. Defaults to the Web3GPT agent."
           },
           "chatId": {
             "type": "string",
+            "nullable": true,
             "description": "Optional chat ID. If omitted, a new chat is created."
           },
           "message": {
             "type": "string",
+            "nullable": true,
             "description": "Optional message to send to the agent."
           },
+          "prompt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Alias for message."
+          },
           "history": {
-            "type": "boolean",
-            "description": "Return full simplified history when true.",
+            "anyOf": [
+              { "type": "boolean", "nullable": true },
+              { "type": "string" }
+            ],
+            "description": "Return full simplified history when true. The strings true and 1 also enable it.",
             "default": false
           },
           "full": {
-            "type": "boolean",
-            "description": "Alias for history=true.",
+            "anyOf": [
+              { "type": "boolean", "nullable": true },
+              { "type": "string" }
+            ],
+            "description": "Alias for history. The strings true and 1 also enable it.",
             "default": false
           }
         }
@@ -236,7 +250,7 @@
             }
           },
           "400": {
-            "description": "Invalid chatId (invalid_chat_id) or a POST body that is not a JSON object (invalid_body)",
+            "description": "Invalid chatId (invalid_chat_id)",
             "content": {
               "application/json": {
                 "schema": {
@@ -341,7 +355,7 @@
             }
           },
           "400": {
-            "description": "Invalid chatId (invalid_chat_id) or a POST body that is not a JSON object (invalid_body)",
+            "description": "Invalid chatId (invalid_chat_id), malformed JSON, a non-object body, or fields with invalid types (invalid_body)",
             "content": {
               "application/json": {
                 "schema": {

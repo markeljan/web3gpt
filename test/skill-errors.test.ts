@@ -4,16 +4,24 @@ import { beforeEach, describe, expect, mock, test } from "bun:test"
 // a chat. Agents read the status and `code` to decide what to fix.
 
 const saved: unknown[] = []
+const increment = mock(() => Promise.resolve(1))
+const getSkillChat = mock(() => Promise.resolve(null))
+const generateAgentReply = mock(() =>
+  Promise.resolve({
+    result: { finalStep: { toolResults: [] }, responseMessages: [{ content: "Fixture answer", role: "assistant" }] },
+  })
+)
 
 mock.module("server-only", () => ({}))
-mock.module("@/lib/redis", () => ({ redis: { expire: () => Promise.resolve(1), incr: () => Promise.resolve(1) } }))
+mock.module("@/lib/agent-chat", () => ({ generateAgentReply }))
+mock.module("@/lib/redis", () => ({ redis: { expire: () => Promise.resolve(1), incr: increment } }))
 mock.module("@/lib/data/agents", () => ({
   // Mirrors the real lookup: unknown ids fall back to the default agent.
   getAgentById: (id: string) =>
     Promise.resolve({ id: id === "agent_custom" ? id : "agent_web3gpt", instructions: "test", name: "Agent" }),
 }))
 mock.module("@/lib/data/kv", () => ({
-  getSkillChat: () => Promise.resolve(null),
+  getSkillChat,
   storeAgentDirect: () => Promise.resolve(),
   storeSkillChat: (chat: unknown) => {
     saved.push(chat)
@@ -29,8 +37,8 @@ mock.module("@/lib/solidity/deploy", () => ({ deployContract: () => Promise.reje
 const { POST } = await import("@/app/api/skill/route")
 const { GET: notFound } = await import("@/app/api/[...path]/route")
 
-const post = (body: string) => {
-  const request = new Request("http://localhost/api/skill", {
+const post = (body: string, query = "") => {
+  const request = new Request(`http://localhost/api/skill${query}`, {
     body,
     headers: { "content-type": "application/json" },
     method: "POST",
@@ -41,6 +49,9 @@ const post = (body: string) => {
 
 beforeEach(() => {
   saved.length = 0
+  increment.mockClear()
+  getSkillChat.mockClear()
+  generateAgentReply.mockClear()
 })
 
 describe("/api/skill errors", () => {
@@ -55,6 +66,42 @@ describe("/api/skill errors", () => {
     const response = await post("[1, 2]")
     expect(response.status).toBe(400)
     expect(await response.json()).toMatchObject({ code: "invalid_body" })
+  })
+
+  test.each([
+    ["message", 42],
+    ["prompt", { text: "not a string" }],
+    ["agentId", ["agent_custom"]],
+    ["chatId", 123],
+    ["chatId", ["valid-id"]],
+    ["history", 1],
+    ["full", {}],
+  ] as const)("rejects a wrong JSON type for %s before using app services", async (field, value) => {
+    const response = await post(JSON.stringify({ [field]: value }))
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({ code: "invalid_body" })
+    expect(increment).not.toHaveBeenCalled()
+    expect(getSkillChat).not.toHaveBeenCalled()
+    expect(generateAgentReply).not.toHaveBeenCalled()
+    expect(saved).toHaveLength(0)
+  })
+
+  test("keeps nullable fields, query fallbacks, prompt, and string flags working", async () => {
+    const response = await post(
+      JSON.stringify({ agentId: null, chatId: "body-chat", full: "1", message: null, prompt: "Body prompt" }),
+      "?agentId=agent_custom&chatId=query-chat&message=Query+message"
+    )
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      agentId: "agent_custom",
+      chatId: "body-chat",
+      history: [
+        { role: "user", text: "Body prompt" },
+        { role: "assistant", text: "Fixture answer" },
+      ],
+      response: "Fixture answer",
+    })
+    expect(generateAgentReply).toHaveBeenCalledTimes(1)
   })
 
   test("an empty body still starts a chat", async () => {
