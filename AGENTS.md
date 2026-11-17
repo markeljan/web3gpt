@@ -132,8 +132,8 @@ These rules come from real incidents or security fixes. Breaking them reintroduc
 - Remote imports are fetched only from `unpkg.com`, `cdn.jsdelivr.net` and
   `raw.githubusercontent.com` (GitHub blob URLs are rewritten), over https, with timeouts and
   size and count caps. Re-check redirects against the allowlist.
-- All four import forms are parsed, multi-line included, and comments are ignored. Rewriting to
-  flat file names replaces only the path literal, so aliases and symbol lists survive. Bare npm
+- All four import forms are parsed, multi-line included, and comments are ignored. Rewriting an
+  import to its resolved source-unit name changes only the path literal. Bare npm
   paths (`solmate/…`, `forge-std/…`) resolve through unpkg.
 - The compiler is chosen from every `pragma solidity` in the contract and its imports. The
   bundled `solc` 0.8.38 (`DEFAULT_COMPILER_VERSION`) is used when it satisfies them. Otherwise

@@ -53,7 +53,8 @@ export const parseDeploymentChainFilter = (value: string | string[] | undefined)
     return null
   }
 
-  return CHAIN_FILTER_ALIASES[normalizedValue.toLowerCase()] ?? null
+  const alias = normalizedValue.toLowerCase()
+  return Object.hasOwn(CHAIN_FILTER_ALIASES, alias) ? CHAIN_FILTER_ALIASES[alias] : null
 }
 
 export const buildPublicAnalytics = ({

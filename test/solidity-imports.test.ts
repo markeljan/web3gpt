@@ -1,6 +1,12 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import solc from "solc"
-import { findImports, prepareContractSources, resolveImports, rewriteImports } from "@/lib/solidity/utils"
+import {
+  findImports,
+  MAX_REMOTE_IMPORTS,
+  prepareContractSources,
+  resolveImports,
+  rewriteImports,
+} from "@/lib/solidity/utils"
 
 test("preserves import offsets after astral characters in comments", () => {
   const source = '/* 😀 */ import "./A.sol";'
@@ -89,13 +95,13 @@ contract Main {
   test("resolves each import and keeps its aliases", async () => {
     const sources = await prepareContractSources("Main", main, localSources)
 
-    expect(Object.keys(sources).sort()).toEqual(["A.sol", "B.sol", "C.sol", "D.sol", "Main.sol"])
+    expect(Object.keys(sources).sort()).toEqual(["A.sol", "C.sol", "D.sol", "Main.sol", "lib/B.sol"])
     const { content } = sources["Main.sol"]
     expect(content).toContain('import "A.sol";')
-    expect(content).toContain('import "B.sol" as B;')
+    expect(content).toContain('import "lib/B.sol" as B;')
     expect(content).toContain('import * as CMod from "C.sol";')
     expect(content).toContain('import {\n  d,\n  e as five\n} from "D.sol";')
-    expect(sources["B.sol"].content).toContain('import {a} from "A.sol";')
+    expect(sources["lib/B.sol"].content).toContain('import {a} from "A.sol";')
   })
 
   test("the rewritten sources compile with the bundled solc", async () => {
@@ -115,26 +121,90 @@ contract Main {
   })
 })
 
-describe("remote resolution of bare package imports", () => {
-  const spies: { mockRestore: () => void }[] = []
-  afterEach(() => {
-    for (const spy of spies.splice(0)) {
-      spy.mockRestore()
+test("keeps direct source names distinct while normalizing relative import segments", async () => {
+  const sources = await prepareContractSources(
+    "Main",
+    'import "./lib/child/../Main.sol" as Nested; import "lib//Main.sol" as Literal;',
+    {
+      "lib//Main.sol": "library Literal {}",
+      "lib/Empty.sol": "",
+      "lib/Main.sol": 'import "../Main.sol" as Root; import "./Empty.sol"; library Nested {}',
     }
+  )
+
+  const [nested, literal] = findImports(sources["Main.sol"].content)
+  expect(nested.path).toBe("lib/Main.sol")
+  expect(literal.path).not.toBe(nested.path)
+  expect(sources[literal.path].content).toBe("library Literal {}")
+  expect(sources[nested.path].content).toBe('import "Main.sol" as Root; import "lib/Empty.sol"; library Nested {}')
+  expect(sources["lib/Empty.sol"].content).toBe("")
+})
+
+const spies: { mockRestore: () => void }[] = []
+afterEach(() => {
+  for (const spy of spies.splice(0)) {
+    spy.mockRestore()
+  }
+})
+
+const fakeRegistry = (files: Record<string, string | { body: string; finalUrl: string }>) => {
+  const requested: string[] = []
+  const spy = spyOn(globalThis, "fetch").mockImplementation(((input: string | URL | Request) => {
+    const url = String(input)
+    requested.push(url)
+    const file = files[url]
+    if (file === undefined) {
+      return Promise.resolve(new Response("not found", { status: 404 }))
+    }
+    if (typeof file === "string") {
+      return Promise.resolve(new Response(file))
+    }
+    const response = new Response(file.body)
+    Object.defineProperty(response, "url", { value: file.finalUrl })
+    return Promise.resolve(response)
+  }) as typeof fetch)
+  spies.push(spy)
+  return requested
+}
+
+test("preserves relative lookup for absolute and URL-shaped local source names", async () => {
+  const requested = fakeRegistry({})
+  const sources = await prepareContractSources(
+    "Main",
+    'import "/Left.sol"; import "https://unpkg.com/pkg/Parent.sol";',
+    {
+      "/Left.sol": 'import "./Shared.sol";',
+      "/Shared.sol": "library AbsoluteShared {}",
+      "https://unpkg.com/pkg/Child File.sol": "library LocalChild {}",
+      "https://unpkg.com/pkg/Parent.sol": 'import "./Child File.sol";',
+      "Shared.sol": "library UnrelatedShared {}",
+    }
+  )
+
+  const [left, parent] = findImports(sources["Main.sol"].content)
+  const [shared] = findImports(sources[left.path].content)
+  const [child] = findImports(sources[parent.path].content)
+  expect(sources[shared.path].content).toBe("library AbsoluteShared {}")
+  expect(sources[child.path].content).toBe("library LocalChild {}")
+  expect(requested).toEqual([])
+  const names = Object.keys(sources)
+  expect(names).toHaveLength(5)
+  expect(names.every((name) => !(name.startsWith("/") || name.includes("://")))).toBe(true)
+})
+
+test("keeps source names from colliding with files in the artifact directory", async () => {
+  const sources = await prepareContractSources("Main", 'import "lib.sol"; import "lib.sol/Nested.sol";', {
+    "lib.sol": "library Library {}",
+    "lib.sol/Nested.sol": "library Nested {}",
   })
 
-  const fakeRegistry = (files: Record<string, string>) => {
-    const requested: string[] = []
-    const spy = spyOn(globalThis, "fetch").mockImplementation(((input: string | URL | Request) => {
-      const url = String(input)
-      requested.push(url)
-      const body = files[url]
-      return Promise.resolve(body === undefined ? new Response("not found", { status: 404 }) : new Response(body))
-    }) as typeof fetch)
-    spies.push(spy)
-    return requested
-  }
+  const [file, nested] = findImports(sources["Main.sol"].content)
+  expect(file.path).toBe("lib.sol")
+  expect(nested.path.startsWith("lib.sol/")).toBe(false)
+  expect(sources[nested.path].content).toBe("library Nested {}")
+})
 
+describe("remote source resolution", () => {
   test("fetches solmate- and forge-std-style imports from unpkg, including their relative imports", async () => {
     const requested = fakeRegistry({
       "https://unpkg.com/forge-std/src/console.sol": "pragma solidity >=0.4.22 <0.9.0;\nlibrary console {}\n",
@@ -153,9 +223,11 @@ describe("remote resolution of bare package imports", () => {
       "https://unpkg.com/solmate/src/auth/Owned.sol",
       "https://unpkg.com/forge-std/src/console.sol",
     ])
-    expect(sourceCode).toBe('import {ERC20} from "ERC20.sol";\nimport * as F from "console.sol";')
-    expect(Object.keys(sources).sort()).toEqual(["ERC20.sol", "Owned.sol", "console.sol"])
-    expect(sources["ERC20.sol"].content).toContain('import {Owned} from "Owned.sol";')
+    const [erc20, console] = findImports(sourceCode)
+    const [owned] = findImports(sources[erc20.path].content)
+    expect(sourceCode).toBe(`import {ERC20} from "${erc20.path}";\nimport * as F from "${console.path}";`)
+    expect(Object.keys(sources).sort()).toEqual([erc20.path, owned.path, console.path].sort())
+    expect(sources[owned.path].content).toContain("abstract contract Owned")
   })
 
   test("a host-like bare import is still held to the allowlist", async () => {
@@ -173,6 +245,69 @@ describe("remote resolution of bare package imports", () => {
       "Main.sol"
     )
     expect(requested).toHaveLength(1)
-    expect(sourceCode).toBe('import "Owned.sol";\nimport {Owned} from "Owned.sol";')
+    const [first, second] = findImports(sourceCode)
+    expect(first.path).toBe(second.path)
+    expect(sourceCode).toBe(`import "${first.path}";\nimport {Owned} from "${first.path}";`)
+  })
+
+  test("keeps distinct GitHub imports and an explicit local URL override separate", async () => {
+    const firstUrl = "https://raw.githubusercontent.com/acme/solidity/main/left/Shared.sol"
+    const secondUrl = "https://raw.githubusercontent.com/acme/solidity/main/right/Shared.sol"
+    const requested = fakeRegistry({ [firstUrl]: "library RemoteLeft {}", [secondUrl]: "library RemoteRight {}" })
+    const result = await resolveImports(
+      `import "https://github.com/acme/solidity/blob/main/left/Shared.sol" as Left;
+import "raw.githubusercontent.com/acme/solidity/main/right/Shared.sol" as Right;
+import "${firstUrl}" as Local;`,
+      "Main.sol",
+      { [firstUrl]: "library LocalLeft {}" }
+    )
+    const names = findImports(result.sourceCode).map(({ path }) => path)
+
+    expect(requested).toEqual([firstUrl, secondUrl])
+    expect(new Set(names).size).toBe(3)
+    expect(names.map((name) => result.sources[name].content)).toEqual([
+      "library RemoteLeft {}",
+      "library RemoteRight {}",
+      "library LocalLeft {}",
+    ])
+  })
+
+  test("resolves dependencies relative to the requested fallback even when it redirects", async () => {
+    const base = "https://unpkg.com/@openzeppelin/contracts"
+    const final = "https://unpkg.com/@openzeppelin/contracts@5.6.0/utils"
+    const requested = fakeRegistry({
+      [`${base}/utils/Context.sol`]: "abstract contract Context {}",
+      [`${base}/utils/Pausable.sol`]: {
+        body: 'import "./Context.sol"; abstract contract Pausable {}',
+        finalUrl: `${final}/Pausable.sol?source=/raw/file`,
+      },
+    })
+    const { sourceCode, sources } = await resolveImports(
+      'import "@openzeppelin/contracts/security/Pausable.sol"; import "@openzeppelin/contracts/utils/Pausable.sol" as Alias;',
+      "Main.sol"
+    )
+    const [primary, alias] = findImports(sourceCode)
+    const [context] = findImports(sources[primary.path].content)
+
+    expect(requested).toEqual([
+      `${base}/security/Pausable.sol`,
+      `${base}/utils/Pausable.sol`,
+      `${base}/utils/Context.sol`,
+    ])
+    expect(primary.path).toBe(alias.path)
+    expect(sources[context.path].content).toBe("abstract contract Context {}")
+  })
+
+  test("counts unsuccessful remote fetches against the shared import budget", async () => {
+    const base = "https://unpkg.com"
+    const imports = Array.from({ length: MAX_REMOTE_IMPORTS - 1 }, (_, index) => `package/Unit${index}.sol`)
+    const requested = fakeRegistry(Object.fromEntries(imports.map((path) => [`${base}/${path}`, ""])))
+    const sourceCode = [...imports, "@openzeppelin/contracts/security/Pausable.sol"]
+      .map((path) => `import "${path}";`)
+      .join("\n")
+
+    await expect(resolveImports(sourceCode, "Main.sol")).rejects.toThrow(`limit ${MAX_REMOTE_IMPORTS}`)
+    expect(requested).toHaveLength(MAX_REMOTE_IMPORTS)
+    expect(requested.at(-1)).toBe(`${base}/@openzeppelin/contracts/security/Pausable.sol`)
   })
 })

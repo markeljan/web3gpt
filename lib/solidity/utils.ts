@@ -1,6 +1,6 @@
+import { createHash } from "node:crypto"
 import { maskComments } from "@/lib/solidity/source-text"
 
-const LOCAL_IMPORT_REGEX = /^\.\//u
 const OPENZEPPELIN_IMPORT_FALLBACKS: Record<string, string[]> = {
   "@openzeppelin/contracts/security/Pausable.sol": ["@openzeppelin/contracts/utils/Pausable.sol"],
   "@openzeppelin/contracts/security/PullPayment.sol": ["@openzeppelin/contracts/utils/PullPayment.sol"],
@@ -83,8 +83,7 @@ export const assertAllowedImportUrl = (url: string): URL => {
 
 type ImportBudget = { remaining: number }
 
-const fetchRemoteSource = async (url: string, budget: ImportBudget): Promise<Response> => {
-  assertAllowedImportUrl(url)
+const fetchRemoteSource = async (url: URL, budget: ImportBudget): Promise<Response> => {
   budget.remaining -= 1
   if (budget.remaining < 0) {
     throw new ImportNotAllowedError(`Too many remote imports (limit ${MAX_REMOTE_IMPORTS})`)
@@ -110,113 +109,150 @@ const readLimitedText = async (response: Response, url: string): Promise<string>
   return text
 }
 
-export async function resolveImports(
-  sourceCode: string,
-  sourcePath?: string,
-  localSources?: Record<string, string>,
-  budget: ImportBudget = { remaining: MAX_REMOTE_IMPORTS }
-) {
-  const sources: { [fileName: string]: { content: string } } = {}
+type ImportResolution = {
+  budget: ImportBudget
+  generatedDirectory: string
+  localPaths: Set<string>
+  localSources: Record<string, string>
+  localUnits: Map<string, string>
+  remoteUnits: Map<string, string>
+  sources: Map<string, { content: string }>
+}
+
+const PORTABLE_PATH_SEGMENT = /^(?!\.{1,2}$)[\w.@$+-]+$/u
+const TRAILING_SLASHES = /\/+$/u
+// ipfsUploadDir adds these files alongside the source bundle.
+const ARTIFACT_FILES = ["abi.json", "bytecode.txt", "standardJsonInput.json"]
+
+function isPortableLocalPath(path: string, localPaths: Set<string>) {
+  const segments = path.split("/")
+  let parent = ""
+  for (const segment of segments) {
+    if (!PORTABLE_PATH_SEGMENT.test(segment) || localPaths.has(parent)) {
+      return false
+    }
+    parent = parent ? `${parent}/${segment}` : segment
+  }
+  return !ARTIFACT_FILES.includes(path)
+}
+
+// Keep ordinary local paths in the source bundle. URLs and other VFS names
+// that cannot be used as archive paths get stable names within a free directory.
+function generatedSourceUnit(resolution: ImportResolution, identity: string, path: string) {
+  const digest = createHash("sha256").update(identity).digest("hex")
+  const basename = path.split("/").at(-1)
+  const fileName = basename && PORTABLE_PATH_SEGMENT.test(basename) ? basename : "source.sol"
+  return `${resolution.generatedDirectory}/${digest}/${fileName}`
+}
+
+export async function resolveImports(sourceCode: string, sourcePath = "", localSources: Record<string, string> = {}) {
+  const localPaths = new Set([...ARTIFACT_FILES, ...Object.keys(localSources)])
+  if (sourcePath) {
+    localPaths.add(sourcePath)
+  }
+  const rootSegments = new Set(Array.from(localPaths, (path) => path.split("/")[0]))
+  let generatedDirectory = "imports"
+  while (rootSegments.has(generatedDirectory)) {
+    generatedDirectory = `_${generatedDirectory}`
+  }
+  const resolution: ImportResolution = {
+    budget: { remaining: MAX_REMOTE_IMPORTS },
+    generatedDirectory,
+    localPaths,
+    localSources,
+    // Register the entry point first so imports can refer to it without overwriting it.
+    localUnits: new Map(sourcePath ? [[sourcePath, sourcePath]] : []),
+    remoteUnits: new Map(),
+    sources: new Map(),
+  }
+  const rewritten = await rewriteResolvedImports(sourceCode, sourcePath, resolution)
+  return { sourceCode: rewritten, sources: Object.fromEntries(resolution.sources) }
+}
+
+async function rewriteResolvedImports(sourceCode: string, sourcePath: string | URL, resolution: ImportResolution) {
   const importPaths = new Set(findImports(sourceCode).map(({ path }) => path))
   const renamed = new Map<string, string>()
   for (const importPath of importPaths) {
-    // biome-ignore lint/performance/noAwaitInLoops: imports share one fetch budget and resolve in source order, which decides file-name collisions
-    const { sources: importedSources, sourceCode: mainSourceCode } = await fetchImport(
-      importPath,
-      sourcePath,
-      localSources,
-      budget
-    )
-
-    // Merge the imported sources into the main sources object
-    Object.assign(sources, importedSources)
-
-    let sourceFileName = importPath.split("/").pop() || importPath
-
-    // if sources[sourceFileName] already exists and the content is the same, then skip, otherwise change the sourceFileName to keep the folder structure but still be a relative path
-    if (sources[sourceFileName] && sources[sourceFileName].content !== mainSourceCode) {
-      sourceFileName = importPath.split("/").slice(-2).join("/")
-    }
-
-    sources[sourceFileName] = {
-      content: mainSourceCode,
-    }
-    renamed.set(importPath, sourceFileName)
+    // biome-ignore lint/performance/noAwaitInLoops: resolve in order against one source registry and fetch budget
+    const name = await resolveImport(importPath, sourcePath, resolution)
+    renamed.set(importPath, name)
   }
-  return { sourceCode: rewriteImports(sourceCode, (importPath) => renamed.get(importPath)), sources }
+  return rewriteImports(sourceCode, (importPath) => renamed.get(importPath))
 }
 
-async function fetchImport(
+async function resolveImport(
   importPath: string,
-  sourcePath: string | undefined,
-  localSources: Record<string, string> | undefined,
-  budget: ImportBudget
-) {
-  // Check if the import exists in provided local sources
-  if (localSources) {
-    let localPath = importPath
-    if (importPath[0] === "." && sourcePath) {
-      localPath = resolveImportPath(importPath, sourcePath)
-    }
-    localPath = localPath.replace(LOCAL_IMPORT_REGEX, "")
-    if (localSources[localPath]) {
-      const importedSource = localSources[localPath]
-      const { sources: importedSources, sourceCode: importedSourceCode } = await resolveImports(
-        importedSource,
-        localPath,
-        localSources,
-        budget
-      )
-      return { sourceCode: importedSourceCode, sources: importedSources }
-    }
+  sourcePath: string | URL,
+  resolution: ImportResolution
+): Promise<string> {
+  // Match local source-unit names before interpreting the import as a network URL.
+  const localBase = typeof sourcePath === "string" ? sourcePath : `${sourcePath.origin}${sourcePath.pathname}`
+  const localPath = isRelativeImport(importPath) ? resolveImportPath(importPath, localBase) : importPath
+  const localUnit = resolution.localUnits.get(localPath)
+  if (localUnit !== undefined) {
+    return localUnit
+  }
+  if (Object.hasOwn(resolution.localSources, localPath)) {
+    const name = isPortableLocalPath(localPath, resolution.localPaths)
+      ? localPath
+      : generatedSourceUnit(resolution, `local:${localPath}`, localPath)
+    resolution.localUnits.set(localPath, name)
+    const content = await rewriteResolvedImports(resolution.localSources[localPath], localPath, resolution)
+    resolution.sources.set(name, { content })
+    return name
   }
 
   const importCandidates = [importPath, ...getImportFallbacks(importPath)]
   let lastError: Error | undefined
 
   for (const importCandidate of importCandidates) {
-    const urlToFetch = getImportUrl(importCandidate, sourcePath)
+    const url = assertAllowedImportUrl(getImportUrl(importCandidate, String(sourcePath)))
+    const remoteUnit = resolution.remoteUnits.get(url.href)
+    if (remoteUnit !== undefined) {
+      return remoteUnit
+    }
     // biome-ignore lint/performance/noAwaitInLoops: fallbacks are tried in order, stopping at the first that exists
-    const response = await fetchRemoteSource(urlToFetch, budget)
+    const response = await fetchRemoteSource(url, resolution.budget)
 
     if (!response.ok) {
       lastError = new Error(`HTTP error! status: ${response.status} while fetching ${importCandidate}`)
       continue
     }
 
-    const importedSource = await readLimitedText(response, urlToFetch)
-
-    // Handle any imports within the fetched source code
-    const { sources, sourceCode } = await resolveImports(importedSource, urlToFetch, localSources, budget)
-
-    return { sourceCode, sources }
+    return resolveRemoteImport(response, url, resolution)
   }
 
   throw lastError || new Error(`Unable to resolve import: ${importPath}`)
 }
 
-/// utility function to handle relative paths
+async function resolveRemoteImport(response: Response, url: URL, resolution: ImportResolution) {
+  const name = generatedSourceUnit(resolution, `remote:${url.href}`, url.pathname)
+  resolution.remoteUnits.set(url.href, name)
+  const sourceCode = await readLimitedText(response, url.href)
+  // Keep relative imports based on the requested location, including fallback paths.
+  const content = await rewriteResolvedImports(sourceCode, url, resolution)
+  resolution.sources.set(name, { content })
+  return name
+}
+
+const isRelativeImport = (path: string) => path.startsWith("./") || path.startsWith("../")
+function withoutLastSegment(path: string) {
+  const slash = path.lastIndexOf("/")
+  return slash === 0 && path.length > 1 ? "/" : path.slice(0, Math.max(slash, 0)).replace(TRAILING_SLASHES, "")
+}
+
 function resolveImportPath(importPath: string, sourcePath: string) {
-  const importSegments = importPath.split("/")
-  const sourceSegments = sourcePath.split("/")
-
-  // Remove the last segment (file name) from the source path
-  sourceSegments.pop()
-
-  // Process each segment of the import path
-  while (importSegments.length > 0 && importSegments[0] === "..") {
-    // Remove one directory level for each '..'
-    sourceSegments.pop()
-    importSegments.shift()
+  // Normalize the relative import. Preserve the importing unit's prefix,
+  // which can contain unnormalized segments from a direct import.
+  let path = withoutLastSegment(sourcePath)
+  for (const segment of importPath.split("/")) {
+    if (segment === "..") {
+      path = withoutLastSegment(path)
+    } else if (segment && segment !== ".") {
+      path = path && path !== "/" ? `${path}/${segment}` : `${path}${segment}`
+    }
   }
-
-  // Special handling for './'
-  if (importSegments.length > 0 && importSegments[0] === ".") {
-    importSegments.shift()
-  }
-
-  // Reconstruct the final path
-  return sourceSegments.concat(importSegments).join("/")
+  return path
 }
 
 // First segment of an npm package path such as "solmate/src/tokens/ERC20.sol"
@@ -230,8 +266,10 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//iu
 export function getImportUrl(importPath: string, sourcePath?: string) {
   let urlToFetch: string
 
-  if (importPath[0] === "." && sourcePath) {
-    urlToFetch = resolveImportPath(importPath, sourcePath)
+  if (isRelativeImport(importPath) && sourcePath) {
+    urlToFetch = SCHEME.test(sourcePath)
+      ? new URL(importPath, sourcePath).href
+      : resolveImportPath(importPath, sourcePath)
   } else if (importPath[0] === "@" || BARE_PACKAGE_IMPORT.test(importPath)) {
     urlToFetch = `https://unpkg.com/${importPath}`
   } else {
@@ -253,9 +291,8 @@ export function getImportUrl(importPath: string, sourcePath?: string) {
 }
 
 function getImportFallbacks(importPath: string) {
-  const explicitFallbacks = OPENZEPPELIN_IMPORT_FALLBACKS[importPath]
-  if (explicitFallbacks) {
-    return explicitFallbacks
+  if (Object.hasOwn(OPENZEPPELIN_IMPORT_FALLBACKS, importPath)) {
+    return OPENZEPPELIN_IMPORT_FALLBACKS[importPath]
   }
 
   if (importPath.includes("/draft-")) {
@@ -277,22 +314,11 @@ export async function prepareContractSources(
 ) {
   const fileName = getContractFileName(contractName)
 
-  const handleImportsResult = await resolveImports(sourceCode, fileName, localSources)
-
-  const sources = {
+  const resolved = await resolveImports(sourceCode, fileName, localSources)
+  return {
     [fileName]: {
-      content: handleImportsResult.sourceCode,
+      content: resolved.sourceCode,
     },
-    ...handleImportsResult.sources,
+    ...resolved.sources,
   }
-
-  // Every file is now stored under a flat name. Point any import that doesn't
-  // already name one of those files at its bare file name.
-  for (const source of Object.values(sources)) {
-    source.content = rewriteImports(source.content, (importPath) =>
-      sources[importPath] ? undefined : importPath.split("/").pop() || importPath
-    )
-  }
-
-  return sources
 }
